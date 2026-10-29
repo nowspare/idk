@@ -1,2240 +1,531 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" dir="ltr">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ID Forge — Sample Student Card Generator</title>
-<style>
-  :root{
-    --bg:#0a0d13; --panel:#131820; --panel-2:#1a2029; --panel-3:#222a36;
-    --border:#242c3a; --text:#e6eaf0; --muted:#8b94a7; --muted-2:#5c6678;
-    --accent:#22d3ee; --accent-2:#6366f1; --ok:#22c55e; --warn:#f59e0b; --danger:#ef4444;
-    --radius:12px; --radius-sm:8px; --radius-xs:6px;
-  }
-  *{box-sizing:border-box}
-  html,body{margin:0;padding:0}
-  body{
-    background:var(--bg); color:var(--text);
-    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
-    font-size:14px; line-height:1.5; -webkit-font-smoothing:antialiased;
-    min-height:100vh;
-  }
-  h1,h2,h3,h4{margin:0; font-weight:600; letter-spacing:-.01em}
-  button,input,select,textarea{font:inherit; color:inherit}
-  a{color:var(--accent)}
-
-  /* ---------- top bar ---------- */
-  .topbar{
-    display:flex; align-items:center; gap:16px; flex-wrap:wrap;
-    padding:14px 22px; border-bottom:1px solid var(--border);
-    background:linear-gradient(180deg,#0d1118,#0a0d13);
-    position:sticky; top:0; z-index:30;
-  }
-  .brand{display:flex; align-items:center; gap:10px; font-weight:700; font-size:16px}
-  .brand .dot{width:10px; height:10px; border-radius:50%; background:var(--accent); box-shadow:0 0 12px var(--accent)}
-  .brand-sub{color:var(--muted); font-size:12px; font-weight:400; margin-left:6px}
-  .topbar-actions{display:flex; gap:8px; margin-left:auto; flex-wrap:wrap}
-
-  /* ---------- buttons ---------- */
-  .btn{
-    display:inline-flex; align-items:center; gap:6px; justify-content:center;
-    padding:8px 14px; border-radius:var(--radius-sm);
-    border:1px solid var(--border); background:var(--panel-2); color:var(--text);
-    cursor:pointer; font-size:13px; font-weight:500; transition:all .15s;
-    white-space:nowrap;
-  }
-  .btn:hover{border-color:var(--accent); background:var(--panel-3)}
-  .btn:active{transform:translateY(1px)}
-  .btn.primary{background:var(--accent); color:#04121a; border-color:transparent; font-weight:600}
-  .btn.primary:hover{background:#5ee0f2}
-  .btn.ghost{background:transparent}
-  .btn.ghost:hover{background:var(--panel-2)}
-  .btn.danger{color:#fca5a5}
-  .btn.danger:hover{border-color:var(--danger); color:#fff; background:#3a1414}
-  .btn.small{padding:5px 10px; font-size:12px}
-  .btn:disabled{opacity:.5; cursor:not-allowed}
-
-  /* ---------- workspace ---------- */
-  .workspace{
-    display:grid; grid-template-columns:minmax(0,1fr) 460px;
-    gap:18px; padding:18px; max-width:1600px; margin:0 auto;
-  }
-  @media (max-width:1100px){
-    .workspace{grid-template-columns:1fr}
-    .preview-col{order:-1}
-  }
-
-  /* ---------- controls panel ---------- */
-  .controls-panel{
-    background:var(--panel); border:1px solid var(--border);
-    border-radius:var(--radius); overflow:hidden; display:flex; flex-direction:column;
-  }
-  .tabs{
-    display:flex; gap:4px; padding:8px; border-bottom:1px solid var(--border);
-    overflow-x:auto; scrollbar-width:none; background:#0f131a;
-  }
-  .tabs::-webkit-scrollbar{display:none}
-  .tab{
-    padding:7px 13px; border-radius:var(--radius-xs); cursor:pointer;
-    color:var(--muted); font-size:12.5px; font-weight:500; white-space:nowrap;
-    border:1px solid transparent; background:transparent; transition:all .15s;
-  }
-  .tab:hover{color:var(--text); background:var(--panel-2)}
-  .tab.active{background:var(--panel-2); color:var(--accent); border-color:var(--border)}
-  .tab-content{display:none; padding:20px; overflow-y:auto}
-  .tab-content.active{display:block}
-  .tab-content h3{margin:0 0 4px; font-size:15px}
-  .tab-content .section-desc{color:var(--muted); font-size:12.5px; margin:0 0 16px}
-
-  /* ---------- form controls ---------- */
-  .field-group{margin-bottom:14px}
-  .grid-2{display:grid; grid-template-columns:1fr 1fr; gap:10px}
-  .grid-3{display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px}
-  @media (max-width:640px){ .grid-2,.grid-3{grid-template-columns:1fr} }
-  label.lbl{display:block; font-size:12px; color:var(--muted); margin-bottom:5px; font-weight:500}
-  input[type=text],input[type=number],input[type=date],input[type=email],input[type=search],select,textarea{
-    width:100%; padding:9px 12px; background:var(--panel-2); border:1px solid var(--border);
-    border-radius:var(--radius-sm); color:var(--text); outline:none; transition:border-color .15s;
-  }
-  input:focus,select:focus,textarea:focus{border-color:var(--accent)}
-  input::placeholder,textarea::placeholder{color:var(--muted-2)}
-  textarea{min-height:80px; resize:vertical; font-family:inherit}
-  .checkbox-row{display:flex; align-items:center; gap:8px; margin:6px 0; font-size:13px}
-  .checkbox-row input[type=checkbox]{width:16px; height:16px; accent-color:var(--accent); cursor:pointer}
-  .row-buttons{display:flex; gap:8px; flex-wrap:wrap; margin-top:10px}
-
-  /* ---------- avatar / photo ---------- */
-  .avatar-row{display:flex; align-items:center; gap:14px; margin-bottom:14px}
-  .avatar-preview{
-    width:76px; height:76px; border-radius:50%; overflow:hidden;
-    border:2px solid var(--border); background:var(--panel-2); flex-shrink:0;
-  }
-  .avatar-preview img{width:100%; height:100%; object-fit:cover; display:block}
-  .avatar-actions{display:flex; flex-direction:column; gap:6px; flex:1}
-
-  /* ---------- fields editor ---------- */
-  .field-row{
-    display:flex; flex-direction:column; gap:6px; padding:10px;
-    background:var(--panel-2); border:1px solid var(--border);
-    border-radius:var(--radius-sm); margin-bottom:8px;
-  }
-  .field-row-main{display:grid; grid-template-columns:1fr 1.4fr; gap:8px}
-  .field-row-actions{display:flex; gap:6px; align-items:center; flex-wrap:wrap}
-  .mini{
-    padding:3px 8px; font-size:11px; border-radius:var(--radius-xs);
-    border:1px solid var(--border); background:var(--panel); cursor:pointer; color:var(--text);
-  }
-  .mini:hover{border-color:var(--accent)}
-  .mini.danger:hover{border-color:var(--danger); color:#fff; background:#3a1414}
-  .mini-check{display:inline-flex; align-items:center; gap:4px; font-size:11px; color:var(--muted); cursor:pointer}
-  .mini-check input{accent-color:var(--accent)}
-
-  /* ---------- preview column ---------- */
-  .preview-col{position:sticky; top:80px; align-self:start; display:flex; flex-direction:column; gap:14px}
-  @media (max-width:1100px){ .preview-col{position:static} }
-  .preview-panel{
-    background:var(--panel); border:1px solid var(--border);
-    border-radius:var(--radius); padding:16px;
-  }
-  .preview-panel h3{font-size:14px; margin-bottom:12px; display:flex; align-items:center; gap:8px}
-  .preview-panel h3 .tag{font-size:10px; padding:2px 7px; border-radius:20px; background:var(--accent); color:#04121a; font-weight:700}
-  .card-stage{display:flex; flex-direction:column; gap:14px}
-  .card-wrap{position:relative; width:100%; max-width:420px; margin:0 auto}
-  .card-wrap .label-line{font-size:11px; color:var(--muted); margin-bottom:6px; text-transform:uppercase; letter-spacing:.08em}
-
-  /* ---------- id card base ---------- */
-  .id-card{
-    width:420px; height:265px; position:relative; overflow:hidden;
-    border-radius:12px; transform-origin:top left;
-    background:var(--c-bg,#fff); color:var(--c-text,#111);
-    box-shadow:0 8px 28px rgba(0,0,0,.45);
-    font-family:var(--c-font, inherit);
-  }
-  .card-watermark{
-    position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
-    pointer-events:none; z-index:20;
-    transform:rotate(-24deg);
-    font-weight:900; font-size:34px; letter-spacing:4px;
-    color:var(--c-wm, rgba(200,30,30,.14));
-    white-space:nowrap; text-align:center; line-height:1;
-    text-shadow:0 0 1px rgba(0,0,0,.05);
-  }
-  .card-inner{
-    position:absolute; inset:0; padding:14px 16px;
-    display:flex; flex-direction:column; z-index:1;
-  }
-  .card-header{display:flex; align-items:center; gap:10px; padding-bottom:8px; border-bottom:1px solid var(--c-line, rgba(0,0,0,.1))}
-  .card-logo{
-    width:34px; height:34px; border-radius:8px; flex-shrink:0;
-    background:var(--c-accent,#2563eb); color:#fff;
-    display:flex; align-items:center; justify-content:center; font-size:16px;
-  }
-  .card-inst-name{font-size:12.5px; font-weight:700; line-height:1.2; color:var(--c-text,#111)}
-  .card-inst-sub{font-size:9.5px; color:var(--c-sub,#666); letter-spacing:.05em; text-transform:uppercase; margin-top:2px}
-  .card-body{display:flex; gap:12px; padding:10px 0; flex:1; min-height:0}
-  .card-photo{
-    width:76px; height:92px; flex-shrink:0; border-radius:8px; overflow:hidden;
-    background:#eee; border:2px solid var(--c-accent,#2563eb);
-    align-self:flex-start;
-  }
-  .card-photo img{width:100%; height:100%; object-fit:cover; display:block}
-  .card-info{flex:1; min-width:0; display:flex; flex-direction:column; gap:6px}
-  .card-name{font-size:15px; font-weight:800; line-height:1.15; color:var(--c-text,#111); letter-spacing:-.01em; margin-bottom:2px}
-  .card-fields{display:grid; grid-template-columns:1fr 1fr; gap:3px 12px; font-size:9px}
-  .card-field{display:flex; flex-direction:column; line-height:1.25; min-width:0}
-  .card-field span{color:var(--c-sub,#777); font-size:7.5px; text-transform:uppercase; letter-spacing:.05em; font-weight:600}
-  .card-field strong{color:var(--c-text,#111); font-weight:600; font-size:9.5px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
-  .card-footer{
-    display:flex; justify-content:space-between; align-items:flex-end;
-    padding-top:6px; border-top:1px solid var(--c-line, rgba(0,0,0,.1));
-    font-size:8.5px; color:var(--c-sub,#777);
-  }
-  .card-title-small{font-weight:700; letter-spacing:.12em; text-transform:uppercase; color:var(--c-accent,#2563eb)}
-  .card-sig{font-style:italic; border-top:1px solid var(--c-line, rgba(0,0,0,.15)); padding-top:3px; min-width:90px; text-align:center}
-
-  /* back */
-  .card-back .back-header{
-    font-size:10px; font-weight:800; letter-spacing:.15em; text-transform:uppercase;
-    color:var(--c-accent,#2563eb); padding-bottom:6px; border-bottom:1px solid var(--c-line, rgba(0,0,0,.1));
-  }
-  .back-grid{display:grid; grid-template-columns:1.3fr 1fr; gap:10px; padding:8px 0; flex:1; min-height:0}
-  .back-fields{display:flex; flex-direction:column; gap:3px; font-size:9px; overflow:hidden}
-  .back-codes{display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px}
-  #qr-code{background:#fff; padding:3px; border-radius:4px; line-height:0}
-  #qr-code img,#qr-code canvas{width:60px !important; height:60px !important; display:block}
-  #barcode{width:100%; max-width:110px; height:30px; background:#fff; padding:2px; border-radius:3px}
-  .back-disclaimer{font-size:7px; color:var(--c-sub,#777); line-height:1.3; border-top:1px solid var(--c-line, rgba(0,0,0,.1)); padding-top:5px; text-align:center}
-
-  /* ---------- templates (CSS var palettes) ---------- */
-  .tpl-modern-minimal{--c-bg:#ffffff; --c-text:#0f172a; --c-sub:#64748b; --c-accent:#2563eb; --c-line:rgba(15,23,42,.10); --c-wm:rgba(37,99,235,.10)}
-  .tpl-dark-academic{--c-bg:#0f1626; --c-text:#f1e9d2; --c-sub:#b8a97f; --c-accent:#d4af37; --c-line:rgba(212,175,55,.28); --c-wm:rgba(212,175,55,.16)}
-  .tpl-blue-professional{--c-bg:#f4f8ff; --c-text:#0b2447; --c-sub:#4a6fa5; --c-accent:#1e40af; --c-line:rgba(30,64,175,.18); --c-wm:rgba(30,64,175,.10)}
-  .tpl-green-campus{--c-bg:#f4fbf4; --c-text:#14532d; --c-sub:#4d7c0f; --c-accent:#16a34a; --c-line:rgba(22,163,74,.20); --c-wm:rgba(22,163,74,.10)}
-  .tpl-purple-modern{--c-bg:#faf7ff; --c-text:#3b0764; --c-sub:#7c3aed; --c-accent:#a855f7; --c-line:rgba(168,85,247,.20); --c-wm:rgba(168,85,247,.10)}
-  .tpl-classic-student{--c-bg:#faf4e6; --c-text:#3b1f0f; --c-sub:#8b5a2b; --c-accent:#9a3412; --c-line:rgba(154,52,18,.22); --c-wm:rgba(154,52,18,.12); --c-font:Georgia,"Times New Roman",serif}
-  .tpl-technical{--c-bg:#0b1220; --c-text:#c9f2ff; --c-sub:#7dd3fc; --c-accent:#06b6d4; --c-line:rgba(6,182,212,.28); --c-wm:rgba(6,182,212,.16); --c-font:ui-monospace,"SF Mono",Menlo,Consolas,monospace}
-  .tpl-medical{--c-bg:#ffffff; --c-text:#1f2937; --c-sub:#6b7280; --c-accent:#dc2626; --c-line:rgba(220,38,38,.18); --c-wm:rgba(220,38,38,.10)}
-  .tpl-engineering{--c-bg:#1a1a1f; --c-text:#f5f5f4; --c-sub:#a8a29e; --c-accent:#f97316; --c-line:rgba(249,115,22,.30); --c-wm:rgba(249,115,22,.16)}
-
-  /* template picker */
-  .tpl-grid{display:grid; grid-template-columns:repeat(3,1fr); gap:10px}
-  @media (max-width:640px){ .tpl-grid{grid-template-columns:repeat(2,1fr)} }
-  .tpl-option{
-    padding:12px 8px; border-radius:var(--radius-sm); border:1px solid var(--border);
-    background:var(--panel-2); cursor:pointer; text-align:center; transition:all .15s;
-  }
-  .tpl-option:hover{border-color:var(--accent)}
-  .tpl-option.active{border-color:var(--accent); background:var(--panel-3); box-shadow:0 0 0 1px var(--accent) inset}
-  .tpl-swatch{width:100%; height:44px; border-radius:6px; margin-bottom:8px; overflow:hidden; display:flex}
-  .tpl-swatch span{flex:1}
-  .tpl-name{font-size:11.5px; font-weight:600}
-  .tpl-desc{font-size:10px; color:var(--muted)}
-
-  /* ---------- bulk profiles ---------- */
-  .profiles-list{display:flex; flex-direction:column; gap:8px; margin-top:14px; max-height:440px; overflow-y:auto; padding-right:4px}
-  .profile-row{
-    display:flex; align-items:center; gap:10px; padding:9px 12px;
-    background:var(--panel-2); border:1px solid var(--border); border-radius:var(--radius-sm);
-    cursor:pointer; transition:border-color .15s;
-  }
-  .profile-row:hover{border-color:var(--accent)}
-  .profile-row .pname{font-size:13px; font-weight:600; flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
-  .profile-row .pid{font-size:11px; color:var(--muted); font-family:ui-monospace,monospace}
-  .profile-row .pdept{font-size:11px; color:var(--muted); max-width:140px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
-  .profile-row .pdel{padding:2px 8px; font-size:11px; color:var(--muted); border:1px solid var(--border); background:transparent; border-radius:5px; cursor:pointer}
-  .profile-row .pdel:hover{color:#fff; border-color:var(--danger); background:#3a1414}
-
-  /* ---------- toast ---------- */
-  .toast-stack{position:fixed; bottom:20px; right:20px; display:flex; flex-direction:column; gap:8px; z-index:200}
-  .toast{
-    padding:10px 16px; border-radius:var(--radius-sm);
-    background:var(--panel-3); border:1px solid var(--border); color:var(--text);
-    font-size:13px; box-shadow:0 6px 20px rgba(0,0,0,.4);
-    animation:slideIn .25s ease; max-width:340px;
-  }
-  .toast.ok{border-color:var(--ok)}
-  .toast.err{border-color:var(--danger)}
-  .toast.warn{border-color:var(--warn)}
-  @keyframes slideIn{from{transform:translateX(20px); opacity:0} to{transform:translateX(0); opacity:1}}
-
-  /* ---------- print ---------- */
-  @media print{
-    body{background:#fff}
-    .topbar,.controls-panel,.tabs,.preview-panel h3,.preview-actions,.toast-stack,.card-wrap .label-line{display:none !important}
-    .workspace{display:block; padding:0; max-width:none}
-    .preview-col{position:static}
-    .preview-panel{border:none; padding:0; background:transparent}
-    .card-stage{gap:24px}
-    .card-wrap{max-width:420px; margin:0}
-    .id-card{box-shadow:none; border:1px solid #ccc}
-  }
-
-  /* utility */
-  .hint{font-size:11.5px; color:var(--muted); margin-top:6px; line-height:1.45}
-  .divider{height:1px; background:var(--border); margin:16px 0}
-  .pill{display:inline-flex; align-items:center; gap:5px; padding:3px 9px; border-radius:20px; font-size:11px; font-weight:600}
-  .pill.real{background:rgba(245,158,11,.15); color:#fcd34d; border:1px solid rgba(245,158,11,.35)}
-  .pill.fiction{background:rgba(34,211,238,.13); color:#67e8f9; border:1px solid rgba(34,211,238,.35)}
-  .muted{color:var(--muted)}
-  .warn-box{
-    padding:10px 12px; border-radius:var(--radius-sm);
-    background:rgba(245,158,11,.08); border:1px solid rgba(245,158,11,.3);
-    color:#fcd34d; font-size:12px; margin-bottom:14px;
-  }
-  .info-box{
-    padding:10px 12px; border-radius:var(--radius-sm);
-    background:rgba(34,211,238,.06); border:1px solid rgba(34,211,238,.25);
-    color:#a5f3fc; font-size:12px; margin-bottom:14px;
-  }
-</style>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Student ID Card Studio -- Pakistan</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Nastaliq+Urdu:wght@400;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js" defer></script>
+<script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js" defer></script>
+<script src="https://cdn.jsdelivr.net/npm/signature_pad@4.2.0/dist/signature_pad.umd.min.js" defer></script>
+<script src="script.js" defer></script>
 </head>
 <body>
 
-<header class="topbar">
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <symbol id="i-logo" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"><path d="M12 2 3 6v6c0 5 4 9 9 10 5-1 9-5 9-10V6l-9-4Z"/></symbol>
+    <symbol id="i-user" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></symbol>
+    <symbol id="i-school" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"><path d="M3 10 12 4l9 6v10h-6v-6h-6v6H3Z"/></symbol>
+    <symbol id="i-search" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></symbol>
+    <symbol id="i-shuffle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M4 4h4l12 16h4M4 20h4l12-16h4M18 4h3v3M18 20h3v-3"/></symbol>
+    <symbol id="i-mail" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></symbol>
+    <symbol id="i-hash" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M6 9h15M4 15h15M10 3 8 21M16 3l-2 18"/></symbol>
+    <symbol id="i-layers" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"><path d="m12 3 9 5-9 5-9-5 9-5Z"/><path d="m3 13 9 5 9-5"/></symbol>
+    <symbol id="i-phone" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M5 3h4l2 5-3 2a12 12 0 0 0 6 6l2-3 5 2v4a2 2 0 0 1-2 2A17 17 0 0 1 3 5a2 2 0 0 1 2-2Z"/></symbol>
+    <symbol id="i-upload" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M12 15V3m-5 5 5-5 5 5M4 15v4a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-4"/></symbol>
+    <symbol id="i-front" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="12" cy="9" r="3"/><path d="M6 20c1-4 3-5 6-5s5 1 6 5"/></symbol>
+    <symbol id="i-back" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M7 9h10M7 13h10M7 17h6"/></symbol>
+    <symbol id="i-globe" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></symbol>
+    <symbol id="i-download" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M12 3v12m-5-5 5 5 5-5M4 21h16"/></symbol>
+    <symbol id="i-print" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M6 9V3h12v6M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></symbol>
+    <symbol id="i-settings" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="3"/><path d="M19 12a7 7 0 0 0-.1-1l2-1-2-3-2 1a7 7 0 0 0-2-1l-.3-2h-4l-.3 2a7 7 0 0 0-2 1l-2-1-2 3 2 1a7 7 0 0 0 0 2l-2 1 2 3 2-1a7 7 0 0 0 2 1l.3 2h4l.3-2a7 7 0 0 0 2-1l2 1 2-3-2-1c.06-.33.1-.66.1-1Z"/></symbol>
+    <symbol id="i-edit" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"><path d="M4 20h4L20 8l-4-4L4 16Z"/></symbol>
+    <symbol id="i-trash" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"/></symbol>
+    <symbol id="i-reset" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M4 12a8 8 0 1 0 3-6M4 4v5h5"/></symbol>
+    <symbol id="i-lock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></symbol>
+    <symbol id="i-unlock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 7-2.6"/></symbol>
+    <symbol id="i-eye" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></symbol>
+    <symbol id="i-copy" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V4H4v12h4"/></symbol>
+    <symbol id="i-pen" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="m3 21 4-1 11-11-3-3L4 17l-1 4Z"/><path d="m14 6 3 3"/></symbol>
+  </defs>
+</svg>
+
+<header class="app-header">
   <div class="brand">
-    <span class="dot"></span>
-    <span id="appTitle">ID Forge</span>
-    <span class="brand-sub">sample student card generator · not valid ID</span>
+    <svg class="icon brand-icon"><use href="#i-logo"/></svg>
+    <div>
+      <div class="brand-title">Student ID Card Studio</div>
+      <div class="brand-sub">Pakistan · ID Card Designer</div>
+    </div>
   </div>
-  <div class="topbar-actions">
-    <button class="btn primary" id="btnGenerateAll">⚡ Generate Everything</button>
-    <button class="btn" id="btnRandomizeAll">🎲 Randomize All</button>
-    <button class="btn ghost" id="btnReset">↺ Reset</button>
+  <div class="header-actions">
+    <div class="lang-switch" role="group" aria-label="Language">
+      <button class="chip active" data-lang="en">English</button>
+      <button class="chip" data-lang="ur">اردو</button>
+    </div>
+    <button class="btn ghost" id="btn-print"><svg class="icon"><use href="#i-print"/></svg><span data-i18n="print">Print</span></button>
+    <button class="btn primary" id="btn-download-both"><svg class="icon"><use href="#i-download"/></svg><span data-i18n="downloadBoth">Download Both</span></button>
   </div>
 </header>
 
-<div class="workspace">
-  <!-- ============ CONTROLS ============ -->
-  <section class="controls-panel">
-    <nav class="tabs" id="tabsNav">
-      <button class="tab active" data-tab="student">Student</button>
-      <button class="tab" data-tab="institution">Institution</button>
-      <button class="tab" data-tab="numbers">Numbers</button>
-      <button class="tab" data-tab="academic">Academic</button>
-      <button class="tab" data-tab="fields">Fields</button>
-      <button class="tab" data-tab="template">Template</button>
-      <button class="tab" data-tab="bulk">Bulk</button>
-      <button class="tab" data-tab="export">Export</button>
-      <button class="tab" data-tab="settings">Settings</button>
+<div class="app-body">
+  <aside class="sidebar">
+    <nav class="nav">
+      <button class="nav-item active" data-section="profile"><svg class="icon"><use href="#i-user"/></svg><span data-i18n="profile">Profile</span></button>
+      <button class="nav-item" data-section="institution"><svg class="icon"><use href="#i-school"/></svg><span data-i18n="institution">Institution</span></button>
+      <button class="nav-item" data-section="department"><svg class="icon"><use href="#i-layers"/></svg><span data-i18n="department">Department</span></button>
+      <button class="nav-item" data-section="identifiers"><svg class="icon"><use href="#i-hash"/></svg><span data-i18n="identifiers">Identifiers</span></button>
+      <button class="nav-item" data-section="contact"><svg class="icon"><use href="#i-phone"/></svg><span data-i18n="contact">Contact & QR</span></button>
+      <button class="nav-item" data-section="design"><svg class="icon"><use href="#i-settings"/></svg><span data-i18n="design">Design</span></button>
+      <button class="nav-item" data-section="signature"><svg class="icon"><use href="#i-pen"/></svg><span data-i18n="signature">Signature</span></button>
+      <button class="nav-item" data-section="library"><svg class="icon"><use href="#i-eye"/></svg><span data-i18n="library">Library</span></button>
     </nav>
-
-    <!-- STUDENT -->
-    <div class="tab-content active" data-panel="student">
-      <h3>Student Information</h3>
-      <p class="section-desc">Every field is editable. Sample data only.</p>
-
-      <div class="field-group">
-        <label class="lbl">Auto Picker Category</label>
-        <div class="grid-3">
-          <select id="nameCat">
-            <option value="pakistani">Pakistani names</option>
-            <option value="international">International names</option>
-            <option value="both" selected>Both</option>
-          </select>
-          <select id="nameGender">
-            <option value="all" selected>All genders</option>
-            <option value="male">Male</option>
-            <option value="female">Female</option>
-            <option value="neutral">Neutral</option>
-          </select>
-          <button class="btn primary" id="btnPickName">🎲 Pick Random Name</button>
-        </div>
-        <p class="hint">Names are drawn from the built-in fictional-name database (or your custom lists below). No person is being identified.</p>
-      </div>
-
-      <div class="field-group">
-        <label class="lbl">Full Name (editable)</label>
-        <input type="text" id="inputFullName" placeholder="e.g. Ali Hassan">
-      </div>
-
-      <div class="grid-3 field-group">
-        <div>
-          <label class="lbl">First</label>
-          <input type="text" id="inputFirst">
-        </div>
-        <div>
-          <label class="lbl">Middle</label>
-          <input type="text" id="inputMiddle">
-        </div>
-        <div>
-          <label class="lbl">Last</label>
-          <input type="text" id="inputLast">
-        </div>
-      </div>
-      <div class="row-buttons" style="margin-top:-6px">
-        <button class="btn small" id="btnComposeName">Compose from parts</button>
-      </div>
-
-      <div class="field-group" style="margin-top:14px">
-        <label class="lbl">Father's / Guardian's Name</label>
-        <input type="text" id="inputGuardian" placeholder="e.g. Muhammad Hassan">
-      </div>
-
-      <div class="divider"></div>
-
-      <h3 style="font-size:14px; margin-bottom:10px">Photo / Avatar</h3>
-      <div class="avatar-row">
-        <div class="avatar-preview"><img id="avatarImg" alt="avatar"></div>
-        <div class="avatar-actions">
-          <button class="btn small" id="btnRandomAvatar">🎲 Random avatar</button>
-          <button class="btn small" id="btnUploadAvatar">📷 Upload image</button>
-          <button class="btn small ghost" id="btnClearAvatar">Clear</button>
-          <input type="file" id="avatarFile" accept="image/*" hidden>
-        </div>
-      </div>
-      <p class="hint">Built-in avatars are synthetic SVG initials — no real person. Uploaded images stay in this browser only.</p>
-
-      <div class="divider"></div>
-
-      <h3 style="font-size:14px; margin-bottom:10px">Sample Email</h3>
-      <div class="grid-2 field-group">
-        <div>
-          <label class="lbl">Username format</label>
-          <select id="emailFormat">
-            <option value="studentNNN" selected>studentNNN</option>
-            <option value="first.lastNNN">first.lastNNN</option>
-            <option value="firstNNN">firstNNN</option>
-            <option value="deptNNN">deptNNN</option>
-            <option value="manual">manual</option>
-          </select>
-        </div>
-        <div>
-          <label class="lbl">Domain</label>
-          <input type="text" id="emailDomain" value="example.com">
-        </div>
-      </div>
-      <div class="field-group">
-        <label class="lbl">Email (editable)</label>
-        <div style="display:flex; gap:8px">
-          <input type="text" id="inputEmail" placeholder="student001@example.com">
-          <button class="btn small" id="btnGenEmail">Generate</button>
-          <button class="btn small ghost" id="btnCopyEmail">Copy</button>
-        </div>
-      </div>
-      <p class="hint">Uses reserved example domains. Not a real account.</p>
-
-      <div class="divider"></div>
-
-      <h3 style="font-size:14px; margin-bottom:10px">Custom Name Lists</h3>
-      <div class="grid-2 field-group">
-        <div>
-          <label class="lbl">Add first names (one per line)</label>
-          <textarea id="customFirstNames" placeholder="Ali&#10;Fatima&#10;Ahmed"></textarea>
-        </div>
-        <div>
-          <label class="lbl">Add last names</label>
-          <textarea id="customLastNames" placeholder="Khan&#10;Malik&#10;Sheikh"></textarea>
-        </div>
-      </div>
-      <div class="row-buttons">
-        <button class="btn small" id="btnSaveCustomNames">Save custom lists</button>
-        <button class="btn small ghost" id="btnImportNames">Import TXT/CSV</button>
-        <input type="file" id="importNamesFile" accept=".txt,.csv" hidden>
+    <div class="sidebar-foot">
+      <div class="safety-note">
+        <strong>ID Card Designer.</strong> Vertical layout · QR + signature · full design control.
       </div>
     </div>
+  </aside>
 
-    <!-- INSTITUTION -->
-    <div class="tab-content" data-panel="institution">
-      <h3>College &amp; University</h3>
-      <p class="section-desc">Fictional institutions are defaults. Real names are offered for design reference only.</p>
+  <main class="main">
+    <section class="controls">
 
-      <div class="field-group">
-        <label class="lbl">Institution</label>
-        <select id="selectInstitution"></select>
-      </div>
+      <div class="panel active" data-panel="profile">
+        <h2 data-i18n="profile">Student Profile</h2>
 
-      <div class="field-group">
-        <div class="grid-2">
-          <button class="btn" id="btnRandomInst">🎲 Pick Random Institution</button>
-          <button class="btn" id="btnAddInst">+ Add custom institution</button>
+        <div class="grid2">
+          <div class="field">
+            <label data-i18n="gender">Gender</label>
+            <select id="in-gender">
+              <option value="male">Male</option>
+              <option value="female">Female</option>
+            </select>
+          </div>
+          <div class="field">
+            <label data-i18n="photo">Portrait</label>
+            <div class="row-actions">
+              <label class="btn ghost small"><svg class="icon"><use href="#i-upload"/></svg><span data-i18n="upload">Upload</span><input type="file" id="in-photo" accept="image/*" hidden></label>
+              <button class="btn ghost small" id="btn-photo-reset"><svg class="icon"><use href="#i-reset"/></svg><span data-i18n="restoreDefault">Restore</span></button>
+            </div>
+          </div>
+        </div>
+
+        <div class="field">
+          <label data-i18n="fullName">Full Name</label>
+          <input type="text" id="in-name">
+        </div>
+
+        <div class="field">
+          <label data-i18n="nameUrdu">Name in Urdu</label>
+          <input type="text" id="in-nameUr" dir="rtl" lang="ur">
+        </div>
+
+        <div class="field">
+          <label data-i18n="fatherName">Father / Guardian Name</label>
+          <input type="text" id="in-fatherName">
+        </div>
+
+        <div class="row-actions wrap">
+          <button class="btn" id="btn-random-name"><svg class="icon"><use href="#i-shuffle"/></svg><span data-i18n="pickName">Pick Random Name</span></button>
+          <button class="btn ghost" id="btn-lock-name"><svg class="icon"><use href="#i-lock"/></svg><span data-i18n="lockName">Lock Name</span></button>
         </div>
       </div>
 
-      <div class="grid-2 field-group">
-        <div>
-          <label class="lbl">Display name (editable)</label>
-          <input type="text" id="inputInstName">
-        </div>
-        <div>
-          <label class="lbl">Category</label>
-          <select id="inputInstType">
-            <option>University</option>
-            <option>College</option>
-            <option>Technical Institute</option>
-            <option>Medical College</option>
-            <option>Engineering College</option>
-            <option>Business School</option>
-            <option>Computer Science Institute</option>
-            <option>School or Academy</option>
-          </select>
-        </div>
-      </div>
-      <div class="row-buttons">
-        <button class="btn small" id="btnRemoveInst">Remove custom institution</button>
-      </div>
-      <div id="instWarning" style="margin-top:12px"></div>
+      <div class="panel" data-panel="institution">
+        <h2 data-i18n="institution">Institution</h2>
 
-      <div class="divider"></div>
+        <div class="field">
+          <label data-i18n="searchInstitution">Search Institution</label>
+          <div class="input-icon">
+            <svg class="icon"><use href="#i-search"/></svg>
+            <input type="text" id="in-inst-search" placeholder="Type to filter…">
+          </div>
+        </div>
 
-      <h3 style="font-size:14px; margin-bottom:10px">Department &amp; Degree</h3>
-      <div class="field-group">
-        <label class="lbl">Department</label>
-        <select id="selectDept"></select>
-      </div>
-      <div class="grid-2 field-group">
-        <div>
-          <label class="lbl">Degree / Program</label>
-          <input type="text" id="inputDegree" placeholder="e.g. BSCS">
+        <div class="field">
+          <label data-i18n="selectInstitution">Select Institution</label>
+          <select id="in-institution"></select>
         </div>
-        <div>
-          <label class="lbl">Faculty (optional)</label>
-          <input type="text" id="inputFaculty" placeholder="e.g. Faculty of Sciences">
-        </div>
-      </div>
-      <div class="row-buttons">
-        <button class="btn small" id="btnRandomDept">🎲 Pick random department</button>
-        <button class="btn small" id="btnAddDept">+ Add custom department</button>
-      </div>
-    </div>
 
-    <!-- NUMBERS -->
-    <div class="tab-content" data-panel="numbers">
-      <h3>Sample Numbers</h3>
-      <p class="section-desc">Every number is fictional. Nothing is issued to any institution.</p>
+        <div class="grid2">
+          <div class="field">
+            <label data-i18n="institutionType">Type</label>
+            <select id="in-instType">
+              <option value="University">University</option>
+              <option value="College">College</option>
+              <option value="Medical College">Medical College</option>
+              <option value="Engineering College">Engineering College</option>
+              <option value="Computer Science Institute">Computer Science Institute</option>
+              <option value="Business School">Business School</option>
+              <option value="Technical Institute">Technical Institute</option>
+              <option value="Academy">Academy</option>
+            </select>
+          </div>
+          <div class="field">
+            <label data-i18n="abbreviation">Abbreviation</label>
+            <input type="text" id="in-instShort" placeholder="UOP">
+          </div>
+        </div>
 
-      <div class="grid-3 field-group">
-        <div>
-          <label class="lbl">Prefix</label>
-          <input type="text" id="numPrefix" value="DEMO">
+        <div class="field">
+          <label data-i18n="customInstitution">Custom Institution Name</label>
+          <input type="text" id="in-instCustom" placeholder="Enter custom institution name">
         </div>
-        <div>
-          <label class="lbl">Digits</label>
-          <input type="number" id="numDigits" value="4" min="1" max="10">
+
+        <div class="field">
+          <label data-i18n="logo">Institution Logo</label>
+          <div class="logo-grid" id="logo-grid"></div>
+          <div class="row-actions">
+            <label class="btn ghost small"><svg class="icon"><use href="#i-upload"/></svg><span data-i18n="upload">Upload</span><input type="file" id="in-logo" accept="image/*" hidden></label>
+            <button class="btn ghost small" id="btn-logo-reset"><svg class="icon"><use href="#i-reset"/></svg><span data-i18n="restoreDefault">Restore</span></button>
+          </div>
         </div>
-        <div>
-          <label class="lbl">Year</label>
-          <input type="number" id="numYear" value="2026" min="2000" max="2100">
-        </div>
-      </div>
-      <div class="grid-2 field-group">
-        <div>
-          <label class="lbl">Separator</label>
-          <select id="numSep">
-            <option value="-">-</option>
-            <option value="/">/</option>
-            <option value="_">_</option>
-            <option value="">(none)</option>
-          </select>
-        </div>
-        <div>
-          <label class="lbl">Mode</label>
-          <select id="numMode">
-            <option value="sequential" selected>Sequential</option>
-            <option value="random">Random</option>
-          </select>
+
+        <div class="row-actions wrap">
+          <button class="btn" id="btn-random-institution"><svg class="icon"><use href="#i-shuffle"/></svg><span data-i18n="pickInstitution">Pick Random Institution</span></button>
+          <button class="btn ghost" id="btn-reset-institution"><svg class="icon"><use href="#i-reset"/></svg><span data-i18n="reset">Reset</span></button>
         </div>
       </div>
 
-      <div class="row-buttons">
-        <button class="btn primary" id="btnGenNumbers">🔄 Generate New Numbers</button>
-      </div>
+      <div class="panel" data-panel="department">
+        <h2 data-i18n="department">Department</h2>
 
-      <div class="divider"></div>
-      <p class="hint">Each field below is editable and shown on the card if visible. Toggle visibility &amp; lock in the <strong>Fields</strong> tab.</p>
-      <div id="numbersPreview" class="profiles-list" style="max-height:300px"></div>
-    </div>
-
-    <!-- ACADEMIC -->
-    <div class="tab-content" data-panel="academic">
-      <h3>Academic Information</h3>
-      <p class="section-desc">Sample academic record — not a verified enrollment.</p>
-
-      <div class="grid-2 field-group">
-        <div>
-          <label class="lbl">Session</label>
-          <input type="text" id="inputSession" placeholder="2024-2028">
+        <div class="field">
+          <label data-i18n="selectDepartment">Select Department</label>
+          <select id="in-department"></select>
         </div>
-        <div>
-          <label class="lbl">Semester</label>
-          <input type="text" id="inputSemester" placeholder="3rd">
-        </div>
-      </div>
-      <div class="grid-3 field-group">
-        <div>
-          <label class="lbl">Year of study</label>
-          <input type="text" id="inputYearStudy" placeholder="2nd">
-        </div>
-        <div>
-          <label class="lbl">Section</label>
-          <input type="text" id="inputSection" placeholder="A">
-        </div>
-        <div>
-          <label class="lbl">Campus</label>
-          <input type="text" id="inputCampus" placeholder="Main">
-        </div>
-      </div>
-      <div class="grid-3 field-group">
-        <div>
-          <label class="lbl">Admission date</label>
-          <input type="date" id="inputAdmission">
-        </div>
-        <div>
-          <label class="lbl">Issue date</label>
-          <input type="date" id="inputIssue">
-        </div>
-        <div>
-          <label class="lbl">Expiry date</label>
-          <input type="date" id="inputExpiry">
-        </div>
-      </div>
-      <div class="field-group">
-        <label class="lbl">Academic status</label>
-        <input type="text" id="inputStatus" placeholder="Active / Enrolled / Sample">
-      </div>
-    </div>
 
-    <!-- FIELDS -->
-    <div class="tab-content" data-panel="fields">
-      <h3>Customize Every Field</h3>
-      <p class="section-desc">Rename labels, edit values, reorder with ↑ ↓, hide, lock, or remove.</p>
-
-      <div id="fieldsEditor"></div>
-      <div class="row-buttons">
-        <button class="btn small" id="btnAddField">+ Add Field</button>
-        <button class="btn small ghost" id="btnResetFields">↺ Reset Fields</button>
-      </div>
-    </div>
-
-    <!-- TEMPLATE -->
-    <div class="tab-content" data-panel="template">
-      <h3>Templates</h3>
-      <p class="section-desc">Original generic layouts. No official institutional design is reproduced.</p>
-      <div class="tpl-grid" id="tplGrid"></div>
-
-      <div class="divider"></div>
-      <div class="field-group">
-        <label class="lbl">Card title (bottom of front)</label>
-        <input type="text" id="inputCardTitle" value="Student ID Card">
-      </div>
-    </div>
-
-    <!-- BULK -->
-    <div class="tab-content" data-panel="bulk">
-      <h3>Bulk Sample Profiles</h3>
-      <p class="section-desc">Generates unique fictional students with distinct sample numbers.</p>
-
-      <div class="row-buttons">
-        <button class="btn" data-bulk="5">Generate 5</button>
-        <button class="btn" data-bulk="10">Generate 10</button>
-        <button class="btn" data-bulk="25">Generate 25</button>
-        <button class="btn" data-bulk="50">Generate 50</button>
-        <button class="btn" id="btnBulkCustom">Custom…</button>
-        <button class="btn danger small" id="btnClearProfiles">Clear all</button>
-      </div>
-
-      <div class="grid-2 field-group" style="margin-top:14px">
-        <div>
-          <label class="lbl">Search</label>
-          <input type="search" id="profileSearch" placeholder="Name, sample ID, or dept">
+        <div class="grid2">
+          <div class="field">
+            <label data-i18n="abbreviation">Abbreviation</label>
+            <input type="text" id="in-deptShort">
+          </div>
+          <div class="field">
+            <label data-i18n="degree">Degree Program</label>
+            <input type="text" id="in-degree">
+          </div>
         </div>
-        <div>
-          <label class="lbl">Filter by department</label>
-          <select id="profileFilter"><option value="">All departments</option></select>
+
+        <div class="grid2">
+          <div class="field">
+            <label data-i18n="session">Academic Session</label>
+            <input type="text" id="in-session" placeholder="2024–2028">
+          </div>
+          <div class="field">
+            <label data-i18n="admissionYear">Admission Year</label>
+            <input type="text" id="in-year" maxlength="4">
+          </div>
+        </div>
+
+        <div class="field">
+          <label data-i18n="customDepartment">Custom Department</label>
+          <input type="text" id="in-deptCustom" placeholder="Enter custom department">
+        </div>
+
+        <div class="row-actions wrap">
+          <button class="btn" id="btn-random-dept"><svg class="icon"><use href="#i-shuffle"/></svg><span data-i18n="pickDepartment">Pick Random Department</span></button>
         </div>
       </div>
 
-      <div class="profiles-list" id="profilesList"></div>
-    </div>
+      <div class="panel" data-panel="identifiers">
+        <h2 data-i18n="identifiers">Identifiers</h2>
+        <p class="hint">Pattern: <code>INST + 2-digit year + DEPT + number</code>.</p>
 
-    <!-- EXPORT -->
-    <div class="tab-content" data-panel="export">
-      <h3>Download &amp; Export</h3>
-      <p class="section-desc">Watermark stays visible in every download and printout.</p>
-
-      <div class="row-buttons" style="margin-bottom:14px">
-        <button class="btn primary" id="btnDownloadPNG">⬇ Download card PNG</button>
-        <button class="btn" id="btnPrint">🖨 Print sample card</button>
-      </div>
-
-      <div class="divider"></div>
-      <h3 style="font-size:14px; margin-bottom:10px">Data export</h3>
-      <div class="row-buttons">
-        <button class="btn" id="btnExportCSV">Export profiles CSV</button>
-        <button class="btn" id="btnExportJSON">Export config JSON</button>
-        <button class="btn" id="btnImportJSON">Import config JSON</button>
-        <input type="file" id="importJSONFile" accept=".json" hidden>
-      </div>
-
-      <div class="divider"></div>
-      <h3 style="font-size:14px; margin-bottom:10px">Saved templates (local browser)</h3>
-      <div class="grid-2 field-group">
-        <div>
-          <label class="lbl">Template name</label>
-          <input type="text" id="templateName" placeholder="my-template">
+        <div class="field">
+          <label data-i18n="studentId">Student ID</label>
+          <div class="input-row">
+            <input type="text" id="in-studentId">
+            <button class="btn icon ghost" data-lock="studentId"><svg class="icon"><use href="#i-unlock"/></svg></button>
+            <button class="btn icon ghost" data-regen="studentId"><svg class="icon"><use href="#i-shuffle"/></svg></button>
+          </div>
         </div>
-        <div style="display:flex; align-items:flex-end">
-          <button class="btn" id="btnSaveTemplate" style="width:100%">💾 Save current</button>
+
+        <div class="field">
+          <label data-i18n="regNumber">Registration Number</label>
+          <div class="input-row">
+            <input type="text" id="in-regNumber">
+            <button class="btn icon ghost" data-lock="regNumber"><svg class="icon"><use href="#i-unlock"/></svg></button>
+            <button class="btn icon ghost" data-regen="regNumber"><svg class="icon"><use href="#i-shuffle"/></svg></button>
+          </div>
+        </div>
+
+        <div class="grid2">
+          <div class="field">
+            <label data-i18n="rollNumber">Roll Number</label>
+            <div class="input-row">
+              <input type="text" id="in-rollNumber">
+              <button class="btn icon ghost" data-lock="rollNumber"><svg class="icon"><use href="#i-unlock"/></svg></button>
+              <button class="btn icon ghost" data-regen="rollNumber"><svg class="icon"><use href="#i-shuffle"/></svg></button>
+            </div>
+          </div>
+          <div class="field">
+            <label data-i18n="admissionNumber">Admission Number</label>
+            <div class="input-row">
+              <input type="text" id="in-admissionNumber">
+              <button class="btn icon ghost" data-lock="admissionNumber"><svg class="icon"><use href="#i-unlock"/></svg></button>
+              <button class="btn icon ghost" data-regen="admissionNumber"><svg class="icon"><use href="#i-shuffle"/></svg></button>
+            </div>
+          </div>
+          <div class="field">
+            <label data-i18n="libraryNumber">Library Number</label>
+            <div class="input-row">
+              <input type="text" id="in-libraryNumber">
+              <button class="btn icon ghost" data-lock="libraryNumber"><svg class="icon"><use href="#i-unlock"/></svg></button>
+              <button class="btn icon ghost" data-regen="libraryNumber"><svg class="icon"><use href="#i-shuffle"/></svg></button>
+            </div>
+          </div>
+          <div class="field">
+            <label data-i18n="examNumber">Examination Number</label>
+            <div class="input-row">
+              <input type="text" id="in-examNumber">
+              <button class="btn icon ghost" data-lock="examNumber"><svg class="icon"><use href="#i-unlock"/></svg></button>
+              <button class="btn icon ghost" data-regen="examNumber"><svg class="icon"><use href="#i-shuffle"/></svg></button>
+            </div>
+          </div>
+          <div class="field">
+            <label data-i18n="campusRef">Campus Reference</label>
+            <input type="text" id="in-campusRef">
+          </div>
+          <div class="field">
+            <label data-i18n="deptRef">Department Reference</label>
+            <input type="text" id="in-deptRef">
+          </div>
+        </div>
+
+        <div class="field">
+          <label data-i18n="cardRef">Card Reference</label>
+          <div class="input-row">
+            <input type="text" id="in-cardRef">
+            <button class="btn icon ghost" data-lock="cardRef"><svg class="icon"><use href="#i-unlock"/></svg></button>
+            <button class="btn icon ghost" data-regen="cardRef"><svg class="icon"><use href="#i-shuffle"/></svg></button>
+          </div>
+        </div>
+
+        <div class="field">
+          <label data-i18n="email">Email Address</label>
+          <div class="input-row">
+            <input type="text" id="in-email" readonly>
+            <button class="btn icon ghost" id="btn-copy-email"><svg class="icon"><use href="#i-copy"/></svg></button>
+            <button class="btn icon ghost" data-lock="email"><svg class="icon"><use href="#i-unlock"/></svg></button>
+            <button class="btn icon ghost" data-regen="email"><svg class="icon"><use href="#i-shuffle"/></svg></button>
+          </div>
+        </div>
+
+        <div class="row-actions wrap">
+          <button class="btn" id="btn-regen-all"><svg class="icon"><use href="#i-shuffle"/></svg><span data-i18n="regenAll">Regenerate All Unlocked</span></button>
         </div>
       </div>
-      <div class="field-group">
-        <label class="lbl">Saved templates</label>
-        <select id="savedTemplates"><option value="">— none —</option></select>
-      </div>
-      <div class="row-buttons">
-        <button class="btn small" id="btnLoadTemplate">Load</button>
-        <button class="btn small danger" id="btnDeleteTemplate">Delete</button>
-        <button class="btn small danger ghost" id="btnClearSaved">Clear all saved</button>
-      </div>
-    </div>
 
-    <!-- SETTINGS -->
-    <div class="tab-content" data-panel="settings">
-      <h3>Settings</h3>
-      <p class="section-desc">App-wide configuration.</p>
+      <div class="panel" data-panel="contact">
+        <h2 data-i18n="contact">Contact & QR</h2>
 
-      <div class="field-group">
-        <label class="lbl">Application title</label>
-        <input type="text" id="inputAppTitle" value="ID Forge">
-      </div>
-
-      <div class="field-group">
-        <label class="lbl">What should Randomize All and Generate Everything touch?</label>
-        <div class="checkbox-row"><input type="checkbox" id="autoName" checked> <label for="autoName">Student name</label></div>
-        <div class="checkbox-row"><input type="checkbox" id="autoInst" checked> <label for="autoInst">Institution</label></div>
-        <div class="checkbox-row"><input type="checkbox" id="autoNumbers" checked> <label for="autoNumbers">Sample numbers</label></div>
-        <div class="checkbox-row"><input type="checkbox" id="autoEmail" checked> <label for="autoEmail">Sample email</label></div>
-        <div class="checkbox-row"><input type="checkbox" id="autoDept" checked> <label for="autoDept">Department &amp; degree</label></div>
-        <div class="checkbox-row"><input type="checkbox" id="autoAcademic" checked> <label for="autoAcademic">Academic info</label></div>
-        <div class="checkbox-row"><input type="checkbox" id="autoPhoto" checked> <label for="autoPhoto">Avatar</label></div>
-      </div>
-
-      <div class="divider"></div>
-      <div class="row-buttons">
-        <button class="btn danger" id="btnHardReset">Hard reset all state</button>
-      </div>
-      <p class="hint" style="margin-top:14px">This app never contacts a server. Everything runs in your browser and is stored only in localStorage if you save templates.</p>
-    </div>
-  </section>
-
-  <!-- ============ PREVIEW ============ -->
-  <section class="preview-col">
-    <div class="preview-panel">
-      <h3>Preview <span class="tag">SAMPLE</span></h3>
-      <div class="card-stage">
-        <div class="card-wrap">
-          <div class="label-line">Front</div>
-          <div id="card-front" class="id-card tpl-modern-minimal"></div>
+        <div class="field">
+          <label data-i18n="phone">Pakistani Mobile Number</label>
+          <div class="input-row">
+            <select id="in-phone"></select>
+            <button class="btn icon ghost" id="btn-random-phone"><svg class="icon"><use href="#i-shuffle"/></svg></button>
+          </div>
         </div>
-        <div class="card-wrap">
-          <div class="label-line">Back</div>
-          <div id="card-back" class="id-card tpl-modern-minimal"></div>
+
+        <div class="field">
+          <label data-i18n="city">City</label>
+          <select id="in-city"></select>
+        </div>
+
+        <div class="field">
+          <label data-i18n="area">Area</label>
+          <select id="in-area"></select>
+        </div>
+
+        <div class="field">
+          <label data-i18n="customLocation">Custom Location</label>
+          <input type="text" id="in-customLoc" placeholder="Enter custom area">
+        </div>
+
+        <hr class="sep">
+
+        <div class="field">
+          <label data-i18n="qrPayload">QR Content (URL or text)</label>
+          <input type="text" id="in-qrPayload" value="https://t.me/ih5zz">
+        </div>
+
+        <div class="field">
+          <label data-i18n="qrUpload">Upload file for QR content</label>
+          <label class="btn ghost small"><svg class="icon"><use href="#i-upload"/></svg><span data-i18n="upload">Upload</span><input type="file" id="in-qrFile" accept=".txt,.json,.csv,text/plain" hidden></label>
+        </div>
+
+        <div class="field">
+          <label data-i18n="qrLogo">QR Center Logo (optional)</label>
+          <div class="row-actions">
+            <label class="btn ghost small"><svg class="icon"><use href="#i-upload"/></svg><span data-i18n="upload">Upload</span><input type="file" id="in-qrLogo" accept="image/*" hidden></label>
+            <button class="btn ghost small" id="btn-qrLogo-reset"><svg class="icon"><use href="#i-reset"/></svg><span data-i18n="clear">Clear</span></button>
+          </div>
+        </div>
+
+        <div class="field">
+          <label data-i18n="notes">Card Notes (back)</label>
+          <textarea id="in-notes" rows="2">This card is the property of the institution and must be surrendered on request.</textarea>
         </div>
       </div>
-      <div class="preview-actions" style="margin-top:14px; display:flex; gap:8px; flex-wrap:wrap">
-        <button class="btn small primary" id="btnQuickPNG">⬇ PNG</button>
-        <button class="btn small" id="btnQuickSave">💾 Save profile</button>
-        <button class="btn small" id="btnQuickCopyId">Copy sample ID</button>
+
+      <div class="panel" data-panel="design">
+        <h2 data-i18n="design">Design</h2>
+
+        <div class="field">
+          <label data-i18n="preset">Theme Preset</label>
+          <div class="theme-grid" id="theme-grid"></div>
+        </div>
+
+        <div class="grid2">
+          <div class="field">
+            <label data-i18n="cardAccent">Accent Color</label>
+            <input type="color" id="in-accent">
+          </div>
+          <div class="field">
+            <label data-i18n="cardBg">Card Background</label>
+            <input type="color" id="in-cardBg">
+          </div>
+        </div>
+
+        <div class="grid2">
+          <div class="field">
+            <label data-i18n="radius">Corner Radius</label>
+            <input type="range" id="in-radius" min="0" max="28" value="18">
+          </div>
+          <div class="field">
+            <label data-i18n="scale">Font Scale</label>
+            <input type="range" id="in-scale" min="0.85" max="1.15" step="0.01" value="1">
+          </div>
+        </div>
+
+        <div class="field">
+          <label data-i18n="cardTitle">Card Title</label>
+          <input type="text" id="in-cardTitle" value="Student Identity Card">
+        </div>
+
+        <div class="field">
+          <label data-i18n="displayOptions">Display Options</label>
+          <div class="toggle-list">
+            <label class="toggle"><input type="checkbox" id="tg-showEmail" checked><span>Show Email</span></label>
+            <label class="toggle"><input type="checkbox" id="tg-showPhone" checked><span>Show Phone</span></label>
+            <label class="toggle"><input type="checkbox" id="tg-showLocation" checked><span>Show Location</span></label>
+            <label class="toggle"><input type="checkbox" id="tg-showIssue" checked><span>Show Issue Date</span></label>
+            <label class="toggle"><input type="checkbox" id="tg-showSignature" checked><span>Show Signature</span></label>
+            <label class="toggle"><input type="checkbox" id="tg-showQrLogo" checked><span>Show QR Center Logo</span></label>
+          </div>
+        </div>
+
+        <div class="grid2">
+          <div class="field">
+            <label data-i18n="issueDate">Issue Date</label>
+            <input type="date" id="in-issueDate">
+          </div>
+          <div class="field">
+            <label data-i18n="expiryDate">Expiry Date</label>
+            <input type="date" id="in-expiryDate">
+          </div>
+        </div>
+
+        <div class="row-actions wrap">
+          <button class="btn" id="btn-save-config"><span data-i18n="saveConfig">Save Configuration</span></button>
+          <button class="btn ghost" id="btn-reset-config"><span data-i18n="resetConfig">Reset Configuration</span></button>
+        </div>
       </div>
-    </div>
-  </section>
+
+      <div class="panel" data-panel="signature">
+        <h2 data-i18n="signature">Principal Signature</h2>
+
+        <div class="field">
+          <label data-i18n="sigDraw">Draw Signature</label>
+          <div class="sign-pad-wrap">
+            <canvas id="sig-canvas" width="600" height="200"></canvas>
+          </div>
+          <div class="row-actions wrap">
+            <button class="btn ghost small" id="btn-sig-clear"><svg class="icon"><use href="#i-reset"/></svg><span data-i18n="clear">Clear</span></button>
+            <button class="btn small" id="btn-sig-save"><span data-i18n="saveSignature">Use Signature</span></button>
+          </div>
+        </div>
+
+        <div class="field">
+          <label data-i18n="sigUpload">Upload Signature</label>
+          <div class="row-actions">
+            <label class="btn ghost small"><svg class="icon"><use href="#i-upload"/></svg><span data-i18n="upload">Upload</span><input type="file" id="in-signature" accept="image/*" hidden></label>
+            <button class="btn ghost small" id="btn-sig-reset"><svg class="icon"><use href="#i-reset"/></svg><span data-i18n="clear">Clear</span></button>
+          </div>
+          <label class="toggle" style="margin-top:8px"><input type="checkbox" id="tg-removeWhite" checked><span data-i18n="removeWhite">Remove white background</span></label>
+        </div>
+
+        <div class="field">
+          <label data-i18n="sigLabel">Signature Label</label>
+          <input type="text" id="in-signatureLabel" value="Principal Signature">
+        </div>
+
+        <div class="sig-preview" id="sig-preview">
+          <span data-i18n="noSignature">No signature set</span>
+        </div>
+      </div>
+
+      <div class="panel" data-panel="library">
+        <h2 data-i18n="library">Library</h2>
+
+        <div class="row-actions wrap">
+          <button class="btn primary" id="btn-gen-profile"><svg class="icon"><use href="#i-shuffle"/></svg><span data-i18n="genFull">Generate Complete Profile</span></button>
+          <button class="btn" id="btn-randomize-all"><span data-i18n="randomizeAll">Randomize All Unlocked</span></button>
+        </div>
+
+        <div class="grid2" style="margin-top:14px">
+          <div class="field">
+            <label data-i18n="quantity">Quantity</label>
+            <select id="in-qty">
+              <option>1</option><option>5</option><option>10</option><option>25</option><option>50</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>&nbsp;</label>
+            <button class="btn" id="btn-gen-many"><span data-i18n="genMany">Generate Many</span></button>
+          </div>
+        </div>
+
+        <div class="field">
+          <label data-i18n="searchId">Search</label>
+          <input type="text" id="in-library-search">
+        </div>
+
+        <div class="profiles-list" id="profiles-list"></div>
+
+        <div class="row-actions wrap" style="margin-top:12px">
+          <button class="btn ghost" id="btn-export-csv"><svg class="icon"><use href="#i-download"/></svg><span data-i18n="exportCsv">Export CSV</span></button>
+          <button class="btn ghost" id="btn-export-json"><svg class="icon"><use href="#i-download"/></svg><span data-i18n="exportJson">Export JSON</span></button>
+          <label class="btn ghost"><svg class="icon"><use href="#i-upload"/></svg><span data-i18n="importJson">Import JSON</span><input type="file" id="in-importJson" accept="application/json" hidden></label>
+        </div>
+      </div>
+
+    </section>
+
+    <section class="preview-pane">
+      <div class="preview-toolbar">
+        <div class="seg" role="group">
+          <button class="seg-btn active" data-surface="front"><svg class="icon"><use href="#i-front"/></svg><span data-i18n="front">Front</span></button>
+          <button class="seg-btn" data-surface="back"><svg class="icon"><use href="#i-back"/></svg><span data-i18n="back">Back</span></button>
+          <button class="seg-btn" data-surface="both"><svg class="icon"><use href="#i-eye"/></svg><span data-i18n="both">Both</span></button>
+        </div>
+      </div>
+
+      <div class="preview-stage" id="preview-stage">
+        <div class="card-wrap" id="wrap-front">
+          <div class="card-label" data-i18n="front">Front</div>
+          <div class="id-card" id="card-front"></div>
+          <div class="card-actions">
+            <button class="btn ghost small" data-download="front"><svg class="icon"><use href="#i-download"/></svg>PNG</button>
+          </div>
+        </div>
+        <div class="card-wrap" id="wrap-back">
+          <div class="card-label" data-i18n="back">Back</div>
+          <div class="id-card" id="card-back"></div>
+          <div class="card-actions">
+            <button class="btn ghost small" data-download="back"><svg class="icon"><use href="#i-download"/></svg>PNG</button>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
 </div>
 
-<div class="toast-stack" id="toastStack"></div>
+<div class="toast" id="toast" aria-live="polite"></div>
 
-<!-- Libraries via jsDelivr; graceful degradation if blocked -->
-<script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
-
-<script>
-/* =========================================================
-   ID Forge — single-file demo generator
-   All generated data is fictional.
-   ========================================================= */
-(function(){
-"use strict";
-
-/* ---------- small helpers ---------- */
-const $  = (s, r=document) => r.querySelector(s);
-const $$ = (s, r=document) => Array.from(r.querySelectorAll(s));
-const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const rand = (n) => Math.floor(Math.random() * n);
-const pick = a => a[rand(a.length)];
-const pad = (n, w) => String(n).padStart(w, '0');
-const uid = () => Math.random().toString(36).slice(2, 9);
-
-function toast(msg, kind){
-  const el = document.createElement('div');
-  el.className = 'toast' + (kind ? ' ' + kind : '');
-  el.textContent = msg;
-  $('#toastStack').appendChild(el);
-  setTimeout(() => { el.style.opacity = '0'; el.style.transition = 'opacity .3s'; }, 2400);
-  setTimeout(() => el.remove(), 2900);
-}
-
-function downloadBlob(blob, filename){
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = filename;
-  document.body.appendChild(a);
-  a.click();
-  setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 100);
-}
-
-function downloadDataURL(dataURL, filename){
-  const a = document.createElement('a');
-  a.href = dataURL;
-  a.download = filename;
-  document.body.appendChild(a);
-  a.click();
-  setTimeout(() => a.remove(), 100);
-}
-
-/* =========================================================
-   FICTIONAL NAME DATABASE
-   ========================================================= */
-const NAMES = {
-  pakistani: {
-    male: {
-      first: ["Ali","Ahmed","Muhammad","Hamza","Bilal","Usman","Umar","Abdullah","Ibrahim","Zain",
-              "Faisal","Kamran","Imran","Asad","Rizwan","Salman","Tariq","Yasir","Waqar","Naveed",
-              "Shahid","Fahad","Saad","Talha","Arslan","Danish","Kashif","Waleed","Junaid","Haris"],
-      middle: ["Ahmed","Ali","Hassan","Hussain","Raza","Khan","Akbar","Iqbal","Aslam","Nawaz"],
-      last:   ["Khan","Ahmed","Malik","Hassan","Raza","Sheikh","Iqbal","Mughal","Butt","Chaudhry",
-              "Qureshi","Syed","Siddiqui","Mirza","Abbasi","Bajwa","Gill","Rana","Shah","Farooq"]
-    },
-    female: {
-      first: ["Ayesha","Fatima","Zainab","Sara","Maryam","Hira","Sana","Rabia","Hina","Iqra",
-              "Nimra","Mahnoor","Areeba","Zara","Laiba","Alina","Anam","Sidra","Sadia","Mehwish",
-              "Komal","Bushra","Faiza","Amna","Hafsa","Rida","Kinza","Aleena","Noor","Zoya"],
-      middle: ["Noor","Fatima","Bibi","Khanum","Akhtar","Sultana","Begum","Parveen","Riaz","Aslam"],
-      last:   ["Khan","Ahmed","Malik","Hassan","Raza","Sheikh","Iqbal","Mughal","Butt","Chaudhry",
-              "Qureshi","Syed","Siddiqui","Mirza","Abbasi","Bajwa","Gill","Rana","Shah","Farooq"]
-    },
-    neutral: {
-      first: ["Aryan","Zoya","Noor","Sami","Mahi","Rumi","Ari","Rayyan","Zayn","Ayan"],
-      middle: ["Ali","Noor","Khan","Raza"],
-      last:   ["Khan","Ahmed","Malik","Shah","Raza"]
-    }
-  },
-  international: {
-    male: {
-      first: ["James","Michael","David","John","Robert","Daniel","Thomas","Chris","Mark","Peter",
-              "Alex","Ryan","Ethan","Noah","Liam","Lucas","Omar","Khalid","Yusuf","Hassan"],
-      middle: ["A.","B.","J.","M.","Lee","James","Paul","David"],
-      last:   ["Smith","Johnson","Williams","Brown","Jones","Davis","Miller","Wilson","Moore","Taylor",
-              "Anderson","Thomas","Jackson","White","Harris","Martin","Thompson","Garcia","Martinez","Robinson"]
-    },
-    female: {
-      first: ["Emma","Olivia","Sophia","Isabella","Mia","Amelia","Sarah","Emily","Jessica","Laura",
-              "Anna","Maria","Fatima","Layla","Aisha","Zara","Chloe","Grace","Nora","Leah"],
-      middle: ["Rose","Marie","Ann","Lee","Jane","Claire","Nicole","Lynn"],
-      last:   ["Smith","Johnson","Williams","Brown","Jones","Davis","Miller","Wilson","Moore","Taylor",
-              "Anderson","Thomas","Jackson","White","Harris","Martin","Thompson","Garcia","Martinez","Robinson"]
-    },
-    neutral: {
-      first: ["Alex","Sam","Jordan","Taylor","Riley","Avery","Quinn","Rowan","Sky","Morgan"],
-      middle: ["A.","B.","C."],
-      last:   ["Smith","Johnson","Lee","Brown","Taylor"]
-    }
-  }
-};
-
-/* =========================================================
-   INSTITUTION DATABASE
-   Fictional default; real Pakistani institutions flagged isReal.
-   ========================================================= */
-const INSTITUTIONS = [
-  { id:"f1", name:"Demo Institute of Technology",       type:"Computer Science Institute", isReal:false, custom:false },
-  { id:"f2", name:"Sample College of Sciences",         type:"College",                    isReal:false, custom:false },
-  { id:"f3", name:"Fictional University of Pakistan",   type:"University",                 isReal:false, custom:false },
-  { id:"r1", name:"University of Peshawar",             type:"University",                 isReal:true,  custom:false },
-  { id:"r2", name:"University of the Punjab",           type:"University",                 isReal:true,  custom:false },
-  { id:"r3", name:"Quaid-i-Azam University",            type:"University",                 isReal:true,  custom:false },
-  { id:"r4", name:"University of Karachi",              type:"University",                 isReal:true,  custom:false },
-  { id:"r5", name:"COMSATS University Islamabad",       type:"University",                 isReal:true,  custom:false },
-  { id:"r6", name:"National University of Sciences and Technology", type:"University",    isReal:true,  custom:false },
-  { id:"r7", name:"University of Engineering and Technology, Lahore", type:"Engineering College", isReal:true, custom:false },
-  { id:"r8", name:"Government College University Lahore", type:"College",                  isReal:true,  custom:false },
-  { id:"r9", name:"University of Agriculture Faisalabad", type:"University",              isReal:true,  custom:false },
-  { id:"r10", name:"Bahria University",                 type:"University",                 isReal:true,  custom:false },
-  { id:"r11", name:"Air University",                    type:"University",                 isReal:true,  custom:false },
-  { id:"r12", name:"Virtual University of Pakistan",    type:"University",                 isReal:true,  custom:false },
-  { id:"r13", name:"Allama Iqbal Open University",      type:"University",                 isReal:true,  custom:false },
-  { id:"r14", name:"International Islamic University Islamabad", type:"University",        isReal:true,  custom:false },
-  { id:"r15", name:"Institute of Business Administration Karachi", type:"Business School", isReal:true, custom:false }
-];
-
-const DEPARTMENTS = [
-  { name:"Computer Science",        abbr:"CS"   },
-  { name:"Information Technology",  abbr:"IT"   },
-  { name:"Software Engineering",    abbr:"SE"   },
-  { name:"Artificial Intelligence", abbr:"AI"   },
-  { name:"Cybersecurity",           abbr:"CY"   },
-  { name:"Data Science",            abbr:"DS"   },
-  { name:"Business Administration", abbr:"BBA"  },
-  { name:"Electrical Engineering",  abbr:"EE"   },
-  { name:"Civil Engineering",       abbr:"CE"   },
-  { name:"Mechanical Engineering",  abbr:"ME"   },
-  { name:"Medicine",                abbr:"MBBS" },
-  { name:"Pharmacy",                abbr:"PH"   },
-  { name:"Biotechnology",           abbr:"BT"   },
-  { name:"Mathematics",             abbr:"MATH" },
-  { name:"Physics",                 abbr:"PHY"  },
-  { name:"Chemistry",               abbr:"CHM"  },
-  { name:"English",                 abbr:"ENG"  },
-  { name:"Economics",               abbr:"ECO"  },
-  { name:"Accounting and Finance",  abbr:"AF"   }
-];
-
-const DEGREES = ["BSCS","BSIT","BSSE","BBA","MBBS","BSEE","BSAI","BSCY","BSDS","BSPH","BSBT","BSCE","BSME","BSEco","MA","MSc"];
-
-/* =========================================================
-   STATE
-   ========================================================= */
-const DEFAULT_FIELDS = () => ([
-  { id:"studentId",   label:"Student ID",        value:"", visible:true,  locked:false },
-  { id:"regNumber",   label:"Registration No.",  value:"", visible:true,  locked:false },
-  { id:"rollNumber",  label:"Roll No.",          value:"", visible:true,  locked:false },
-  { id:"department",  label:"Department",        value:"", visible:true,  locked:false },
-  { id:"degree",      label:"Degree Program",    value:"", visible:true,  locked:false },
-  { id:"session",     label:"Session",           value:"", visible:true,  locked:false },
-  { id:"semester",    label:"Semester",          value:"", visible:true,  locked:false },
-  { id:"section",     label:"Section",           value:"", visible:false, locked:false },
-  { id:"campus",      label:"Campus",            value:"", visible:false, locked:false },
-  { id:"email",       label:"Email",             value:"", visible:true,  locked:false },
-  { id:"issueDate",   label:"Issue Date",        value:"", visible:true,  locked:false },
-  { id:"expiryDate",  label:"Valid Till",        value:"", visible:true,  locked:false }
-]);
-
-const DEFAULT_STATE = () => ({
-  appTitle: "ID Forge",
-  cardTitle: "Student ID Card",
-  template: "modern-minimal",
-  student: {
-    fullName: "",
-    guardian: "",
-    photo: null
-  },
-  institutionId: "f1",
-  institutionName: "Demo Institute of Technology",
-  institutionType: "Computer Science Institute",
-  institutionIsReal: false,
-  departmentName: "",
-  departmentAbbr: "",
-  degree: "",
-  faculty: "",
-  fields: DEFAULT_FIELDS(),
-  numConfig: { prefix:"DEMO", digits:4, year:2026, sep:"-", mode:"sequential", counter: 1 },
-  emailConfig: { format:"studentNNN", domain:"example.com" },
-  nameConfig: { category:"both", gender:"all", customFirst:[], customLast:[] },
-  customInstitutions: [],
-  customDepartments: [],
-  autoToggles: { name:true, inst:true, numbers:true, email:true, dept:true, academic:true, photo:true },
-  profiles: []
-});
-
-let state = DEFAULT_STATE();
-
-/* =========================================================
-   AVATAR (synthetic SVG — clearly not a real person)
-   ========================================================= */
-const AVATAR_PALETTE = [
-  ["#2563eb","#60a5fa"], ["#16a34a","#4ade80"], ["#dc2626","#f87171"],
-  ["#9333ea","#c084fc"], ["#ea580c","#fb923c"], ["#0891b2","#22d3ee"],
-  ["#be185d","#f472b6"], ["#4f46e5","#818cf8"], ["#65a30d","#a3e635"],
-  ["#0d9488","#2dd4bf"]
-];
-
-function makeAvatar(seed, name){
-  const s = String(seed || 'sample') + String(name || '');
-  let h = 0; for (let i=0;i<s.length;i++) h = (h*31 + s.charCodeAt(i)) >>> 0;
-  const [c1,c2] = AVATAR_PALETTE[h % AVATAR_PALETTE.length];
-  const initials = (String(name || 'S S').split(/\s+/).filter(Boolean).map(w => w[0]).join('').slice(0,2) || 'SS').toUpperCase();
-  const svg =
-    '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">' +
-    '<defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1">' +
-    '<stop offset="0" stop-color="' + c1 + '"/><stop offset="1" stop-color="' + c2 + '"/>' +
-    '</linearGradient></defs>' +
-    '<rect width="200" height="200" fill="url(#g)"/>' +
-    '<circle cx="100" cy="80" r="34" fill="rgba(255,255,255,.28)"/>' +
-    '<path d="M40 200 Q40 132 100 132 Q160 132 160 200 Z" fill="rgba(255,255,255,.22)"/>' +
-    '<text x="100" y="118" font-family="system-ui,-apple-system,Segoe UI,Roboto,sans-serif" ' +
-    'font-size="58" font-weight="800" fill="#fff" text-anchor="middle" ' +
-    'style="paint-order:stroke;stroke:rgba(0,0,0,.18);stroke-width:2">' +
-    initials.replace(/[<>&"']/g,'') + '</text>' +
-    '</svg>';
-  return 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
-}
-
-/* =========================================================
-   GENERATORS
-   ========================================================= */
-function splitFullName(full){
-  const parts = String(full || '').trim().split(/\s+/).filter(Boolean);
-  if (parts.length === 0) return { first:'', middle:'', last:'' };
-  if (parts.length === 1) return { first:parts[0], middle:'', last:'' };
-  if (parts.length === 2) return { first:parts[0], middle:'', last:parts[1] };
-  return { first:parts[0], middle:parts.slice(1,-1).join(' '), last:parts[parts.length-1] };
-}
-
-function randomName(category, gender){
-  // gather pools
-  const cats = [];
-  if (category === 'pakistani') cats.push(NAMES.pakistani);
-  else if (category === 'international') cats.push(NAMES.international);
-  else cats.push(NAMES.pakistani, NAMES.international);
-
-  const pool = [];
-  cats.forEach(c => {
-    if (gender === 'male')       pool.push(c.male);
-    else if (gender === 'female')pool.push(c.female);
-    else if (gender === 'neutral')pool.push(c.neutral);
-    else                         pool.push(c.male, c.female, c.neutral);
-  });
-
-  const firstList = [];
-  const midList   = [];
-  const lastList  = [];
-  pool.forEach(p => { firstList.push(...p.first); midList.push(...p.middle); lastList.push(...p.last); });
-
-  // custom first/last merge
-  const customFirst = state.nameConfig.customFirst;
-  const customLast  = state.nameConfig.customLast;
-  if (customFirst.length) firstList.push(...customFirst);
-  if (customLast.length)  lastList.push(...customLast);
-
-  const f = pick(firstList);
-  const useMiddle = Math.random() < 0.55;
-  const m = useMiddle ? pick(midList) : '';
-  const l = pick(lastList);
-  return { first:f, middle:m, last:l, full:[f, m, l].filter(Boolean).join(' ') };
-}
-
-function randomInstitution(){
-  const all = INSTITUTIONS.concat(state.customInstitutions);
-  return pick(all);
-}
-
-function randomDepartment(){
-  const all = DEPARTMENTS.concat(state.customDepartments);
-  return pick(all);
-}
-
-function randomDegree(deptAbbr){
-  const pool = DEGREES.slice();
-  if (deptAbbr) pool.unshift('BS' + deptAbbr);
-  return pick(pool);
-}
-
-function generateNumberString(prefix, sep, year, digits, includeYear, counterOrRandom){
-  const n = String(counterOrRandom).padStart(digits, '0');
-  if (includeYear) return prefix + sep + year + sep + n;
-  return prefix + sep + n;
-}
-
-function bumpCounter(){
-  const c = state.numConfig.counter++;
-  return c;
-}
-
-function generateOneNumber(prefix, includeYear){
-  const c = state.numConfig;
-  if (c.mode === 'random') {
-    const max = Math.pow(10, c.digits) - 1;
-    return generateNumberString(prefix, c.sep, c.year, c.digits, includeYear, rand(max + 1));
-  }
-  return generateNumberString(prefix, c.sep, c.year, c.digits, includeYear, bumpCounter());
-}
-
-function generateAllNumbers(){
-  // each field has its own prefix
-  const map = {
-    studentId:  generateOneNumber('DEMO', true),
-    regNumber:  generateOneNumber('REG', true),
-    rollNumber: generateOneNumber('ROLL', false),
-    email:      null, // handled by email gen
-    issueDate:  fmtDate(new Date()),
-    expiryDate: fmtDate(new Date(Date.now() + 4 * 365 * 24 * 3600 * 1000))
-  };
-
-  // always regenerate a full set of numeric fields so they look unique
-  setFieldValue('studentId', map.studentId);
-  setFieldValue('regNumber', map.regNumber);
-  setFieldValue('rollNumber', map.rollNumber);
-  setFieldValue('issueDate', map.issueDate);
-  setFieldValue('expiryDate', map.expiryDate);
-
-  // populate other number-ish fields even if hidden
-  setFieldValueIfEmpty('admissionNumber', generateOneNumber('ADM', true));
-  setFieldValueIfEmpty('examNumber',      generateOneNumber('EXAM', false));
-  setFieldValueIfEmpty('libraryNumber',   generateOneNumber('LIB', false));
-  setFieldValueIfEmpty('deptNumber',      generateOneNumber('DEP', false));
-  setFieldValueIfEmpty('classNumber',     generateOneNumber('CLS', false));
-  setFieldValueIfEmpty('campusNumber',    generateOneNumber('CMP', false));
-}
-
-function setFieldValue(id, val){
-  const f = state.fields.find(x => x.id === id);
-  if (f) { f.value = String(val); return; }
-  // auto-add hidden field for these known ids
-  const known = {
-    admissionNumber:{ label:"Admission No." },
-    examNumber:{ label:"Exam No." },
-    libraryNumber:{ label:"Library No." },
-    deptNumber:{ label:"Dept Code" },
-    classNumber:{ label:"Class No." },
-    campusNumber:{ label:"Campus Code" }
-  };
-  if (known[id]) {
-    state.fields.push({ id, label: known[id].label, value: String(val), visible:false, locked:false });
-  }
-}
-
-function setFieldValueIfEmpty(id, val){
-  const f = state.fields.find(x => x.id === id);
-  if (f && f.value) return;
-  setFieldValue(id, val);
-}
-
-function getFieldValue(id){
-  const f = state.fields.find(x => x.id === id);
-  return f ? f.value : '';
-}
-
-function fmtDate(d){
-  const y = d.getFullYear();
-  const m = pad(d.getMonth()+1, 2);
-  const day = pad(d.getDate(), 2);
-  return y + '-' + m + '-' + day;
-}
-
-function generateEmail(){
-  const cfg = state.emailConfig;
-  const dept = (getFieldValue('department') || state.departmentName || 'student').split(/\s+/)[0].toLowerCase();
-  const full = state.student.fullName || 'Sample Student';
-  const parts = splitFullName(full);
-  const n = pad(rand(999)+1, 3);
-  const n2 = pad(rand(9999)+1, 4);
-
-  let user;
-  switch (cfg.format) {
-    case 'first.lastNNN': user = (parts.first||'sample').toLowerCase() + '.' + (parts.last||'name').toLowerCase() + n; break;
-    case 'firstNNN':      user = (parts.first||'sample').toLowerCase() + n; break;
-    case 'deptNNN':       user = dept + n; break;
-    case 'manual':        return; // leave as-is
-    default:              user = 'student' + n2;
-  }
-  user = user.replace(/[^a-z0-9.]/g, '');
-  const domain = (cfg.domain || 'example.com').replace(/^@/, '').replace(/[^a-z0-9.-]/gi, '');
-  return user + '@' + domain;
-}
-
-/* =========================================================
-   SETTERS — reflect state to inputs
-   ========================================================= */
-function refreshAllInputs(){
-  // student
-  $('#inputFullName').value = state.student.fullName || '';
-  const parts = splitFullName(state.student.fullName);
-  $('#inputFirst').value = parts.first;
-  $('#inputMiddle').value = parts.middle;
-  $('#inputLast').value = parts.last;
-  $('#inputGuardian').value = state.student.guardian || '';
-
-  // institution select
-  renderInstitutionSelect();
-  $('#inputInstName').value = state.institutionName || '';
-  $('#inputInstType').value = state.institutionType || 'University';
-
-  // department
-  renderDepartmentSelect();
-  $('#inputDegree').value = state.degree || '';
-  $('#inputFaculty').value = state.faculty || '';
-
-  // numbers config
-  $('#numPrefix').value = state.numConfig.prefix;
-  $('#numDigits').value = state.numConfig.digits;
-  $('#numYear').value   = state.numConfig.year;
-  $('#numSep').value    = state.numConfig.sep;
-  $('#numMode').value   = state.numConfig.mode;
-
-  // email config
-  $('#emailFormat').value = state.emailConfig.format;
-  $('#emailDomain').value = state.emailConfig.domain;
-  $('#inputEmail').value  = getFieldValue('email');
-
-  // academic
-  $('#inputSession').value    = getFieldValue('session');
-  $('#inputSemester').value   = getFieldValue('semester');
-  $('#inputYearStudy').value  = getFieldValue('yearOfStudy');
-  $('#inputSection').value    = getFieldValue('section');
-  $('#inputCampus').value     = getFieldValue('campus');
-  $('#inputAdmission').value  = getFieldValue('admissionDate');
-  $('#inputIssue').value      = getFieldValue('issueDate');
-  $('#inputExpiry').value     = getFieldValue('expiryDate');
-  $('#inputStatus').value     = getFieldValue('status');
-
-  // template
-  $('#inputCardTitle').value = state.cardTitle;
-
-  // app title
-  $('#inputAppTitle').value = state.appTitle;
-  $('#appTitle').textContent = state.appTitle;
-
-  // avatar
-  const av = state.student.photo || makeAvatar(state.student.fullName, state.student.fullName);
-  $('#avatarImg').src = av;
-
-  // template picker active
-  $$('.tpl-option').forEach(el => el.classList.toggle('active', el.dataset.tpl === state.template));
-
-  renderFieldsEditor();
-  renderNumbersPreview();
-  renderProfiles();
-  renderCard();
-}
-
-/* =========================================================
-   CARD RENDERING
-   ========================================================= */
-function renderCard(){
-  const s = state.student;
-  const visible = state.fields.filter(f => f.visible);
-  const front = visible.slice(0, 6);
-  const back  = visible.slice(6);
-
-  const avatar = s.photo || makeAvatar(s.fullName || 'sample', s.fullName || 'S S');
-  const instName = state.institutionName || 'Sample Institution';
-  const instType = state.institutionType || 'University';
-  const isReal   = !!state.institutionIsReal;
-
-  // ---- FRONT ----
-  const frontEl = $('#card-front');
-  frontEl.className = 'id-card tpl-' + state.template;
-  frontEl.innerHTML =
-    '<div class="card-watermark">SAMPLE &mdash; NOT VALID ID</div>' +
-    '<div class="card-inner">' +
-      '<div class="card-header">' +
-        '<div class="card-logo">&#127891;</div>' +
-        '<div class="card-inst" style="min-width:0;flex:1">' +
-          '<div class="card-inst-name">' + esc(instName) + '</div>' +
-          '<div class="card-inst-sub">' + esc(instType) + (isReal ? ' &middot; Reference Only' : '') + '</div>' +
-        '</div>' +
-      '</div>' +
-      '<div class="card-body">' +
-        '<div class="card-photo"><img alt="" src="' + avatar + '"></div>' +
-        '<div class="card-info">' +
-          '<div class="card-name">' + esc(s.fullName || 'Sample Student') + '</div>' +
-          '<div class="card-fields">' +
-            front.map(f =>
-              '<div class="card-field"><span>' + esc(f.label) + '</span><strong>' + esc(f.value || '—') + '</strong></div>'
-            ).join('') +
-          '</div>' +
-        '</div>' +
-      '</div>' +
-      '<div class="card-footer">' +
-        '<div class="card-title-small">' + esc(state.cardTitle) + '</div>' +
-        '<div class="card-sig">Authorized Signature</div>' +
-      '</div>' +
-    '</div>';
-
-  // ---- BACK ----
-  const backEl = $('#card-back');
-  backEl.className = 'id-card tpl-' + state.template;
-  backEl.innerHTML =
-    '<div class="card-watermark">SAMPLE &mdash; NOT VALID ID</div>' +
-    '<div class="card-inner card-back">' +
-      '<div class="back-header">Student Information</div>' +
-      '<div class="back-grid">' +
-        '<div class="back-fields">' +
-          (back.length ? back.map(f =>
-            '<div class="card-field"><span>' + esc(f.label) + '</span><strong>' + esc(f.value || '—') + '</strong></div>'
-          ).join('') : '<div class="card-field"><span>Guardian</span><strong>' + esc(s.guardian || '—') + '</strong></div>') +
-        '</div>' +
-        '<div class="back-codes">' +
-          '<div id="qr-code"></div>' +
-          '<svg id="barcode"></svg>' +
-        '</div>' +
-      '</div>' +
-      '<div class="back-disclaimer">This card is a fictional sample generated for design / educational use. ' +
-        'It does not represent enrollment or identity in any institution. Not valid ID.</div>' +
-    '</div>';
-
-  // ---- QR + BARCODE ----
-  try {
-    const qrEl = $('#qr-code');
-    if (qrEl) {
-      if (window.QRCode) {
-        new QRCode(qrEl, {
-          text: 'SAMPLE-NOT-VALID:' + (s.fullName || 'Sample') + ':' + (getFieldValue('studentId') || '0000'),
-          width: 70, height: 70, colorDark: '#000', colorLight: '#fff', correctLevel: QRCode.CorrectLevel.L
-        });
-      } else {
-        qrEl.innerHTML = '<div style="font-size:7px;color:#000;padding:3px;text-align:center">QR lib<br>unavailable</div>';
-      }
-    }
-    const bcEl = $('#barcode');
-    if (bcEl && window.JsBarcode) {
-      try {
-        JsBarcode(bcEl, (getFieldValue('studentId') || 'SAMPLE-0000').replace(/[^\w-]/g,'') || 'SAMPLE0000',
-          { format:'CODE128', width:1, height:26, displayValue:false, margin:0, background:'#fff', lineColor:'#000' });
-      } catch(e) {
-        bcEl.outerHTML = '<div style="font-size:7px;color:#000;background:#fff;padding:3px">barcode unavailable</div>';
-      }
-    } else if (bcEl) {
-      bcEl.outerHTML = '<div style="font-size:7px;color:#000;background:#fff;padding:3px">barcode lib<br>unavailable</div>';
-    }
-  } catch(e) { /* noop */ }
-
-  fitCards();
-}
-
-function fitCards(){
-  $$('.card-wrap').forEach(wrap => {
-    const card = wrap.querySelector('.id-card');
-    if (!card) return;
-    const s = wrap.clientWidth / 420;
-    card.style.transform = 'scale(' + s + ')';
-    // ensure wrap has correct height
-    const label = wrap.querySelector('.label-line');
-    const labelH = label ? label.offsetHeight + 6 : 0;
-    wrap.style.height = (265 * s + labelH) + 'px';
-  });
-}
-
-window.addEventListener('resize', fitCards);
-
-/* =========================================================
-   RENDER: INSTITUTION / DEPARTMENT SELECTS
-   ========================================================= */
-function renderInstitutionSelect(){
-  const sel = $('#selectInstitution');
-  const all = INSTITUTIONS.concat(state.customInstitutions);
-  sel.innerHTML = all.map(i => {
-    const tag = i.isReal ? ' ⚠ real · reference only' : (i.custom ? ' · custom' : ' · demo');
-    return '<option value="' + i.id + '">' + esc(i.name) + tag + '</option>';
-  }).join('');
-  sel.value = state.institutionId;
-}
-
-function renderDepartmentSelect(){
-  const sel = $('#selectDept');
-  const all = DEPARTMENTS.concat(state.customDepartments);
-  sel.innerHTML = all.map(d =>
-    '<option value="' + esc(d.abbr) + '">' + esc(d.name) + ' (' + esc(d.abbr) + ')</option>'
-  ).join('');
-  const match = all.find(d => d.name === state.departmentName);
-  if (match) sel.value = match.abbr;
-}
-
-function renderInstWarning(){
-  const el = $('#instWarning');
-  if (!el) return;
-  el.innerHTML = state.institutionIsReal
-    ? '<div class="warn-box">⚠ You selected a real institution for design reference. This app does not reproduce any official card, logo, or security feature. Every generated card is a watermark-stamped sample.</div>'
-    : '<div class="info-box">✓ Fictional institution. Safe for demo output.</div>';
-}
-
-/* =========================================================
-   FIELDS EDITOR
-   ========================================================= */
-function renderFieldsEditor(){
-  const el = $('#fieldsEditor');
-  el.innerHTML = state.fields.map((f, i) =>
-    '<div class="field-row" data-id="' + esc(f.id) + '">' +
-      '<div class="field-row-main">' +
-        '<input class="f-label" data-i="' + i + '" value="' + esc(f.label) + '" placeholder="Label">' +
-        '<input class="f-value" data-i="' + i + '" value="' + esc(f.value) + '" placeholder="Value">' +
-      '</div>' +
-      '<div class="field-row-actions">' +
-        '<button class="mini" data-act="up" data-i="' + i + '">↑</button>' +
-        '<button class="mini" data-act="down" data-i="' + i + '">↓</button>' +
-        '<label class="mini-check"><input type="checkbox" data-act="vis" data-i="' + i + '" ' + (f.visible?'checked':'') + '> show</label>' +
-        '<label class="mini-check"><input type="checkbox" data-act="lock" data-i="' + i + '" ' + (f.locked?'checked':'') + '> lock</label>' +
-        '<button class="mini danger" data-act="del" data-i="' + i + '">×</button>' +
-      '</div>' +
-    '</div>'
-  ).join('');
-
-  // wire
-  el.querySelectorAll('input.f-label').forEach(inp => {
-    inp.addEventListener('input', e => {
-      const i = +e.target.dataset.i;
-      state.fields[i].label = e.target.value;
-      renderCard();
-    });
-  });
-  el.querySelectorAll('input.f-value').forEach(inp => {
-    inp.addEventListener('input', e => {
-      const i = +e.target.dataset.i;
-      state.fields[i].value = e.target.value;
-      renderCard();
-      renderNumbersPreview();
-    });
-  });
-  el.querySelectorAll('[data-act]').forEach(btn => {
-    btn.addEventListener('click', e => {
-      const i = +e.target.dataset.i;
-      const act = e.target.dataset.act;
-      if (act === 'up' && i > 0) {
-        [state.fields[i-1], state.fields[i]] = [state.fields[i], state.fields[i-1]];
-      } else if (act === 'down' && i < state.fields.length-1) {
-        [state.fields[i+1], state.fields[i]] = [state.fields[i], state.fields[i+1]];
-      } else if (act === 'del') {
-        state.fields.splice(i, 1);
-      } else if (act === 'vis') {
-        state.fields[i].visible = e.target.checked;
-      } else if (act === 'lock') {
-        state.fields[i].locked = e.target.checked;
-      }
-      renderFieldsEditor();
-      renderCard();
-      renderNumbersPreview();
-    });
-  });
-}
-
-function renderNumbersPreview(){
-  const el = $('#numbersPreview');
-  const ids = ['studentId','regNumber','rollNumber','admissionNumber','examNumber','libraryNumber','deptNumber','classNumber','campusNumber'];
-  el.innerHTML = ids.map(id => {
-    const f = state.fields.find(x => x.id === id);
-    if (!f) return '';
-    return '<div class="profile-row" style="cursor:default">' +
-      '<span class="pname">' + esc(f.label) + '</span>' +
-      '<span class="pid">' + esc(f.value || '—') + '</span>' +
-      '<span style="font-size:11px;color:' + (f.locked ? 'var(--warn)' : 'var(--muted)') + '">' +
-        (f.locked ? '🔒 locked' : '') + '</span>' +
-    '</div>';
-  }).join('');
-}
-
-/* =========================================================
-   TEMPLATE PICKER
-   ========================================================= */
-const TEMPLATES = [
-  { id:'modern-minimal',     name:'Modern Minimal',    desc:'White · blue',    colors:['#ffffff','#2563eb'] },
-  { id:'dark-academic',      name:'Dark Academic',     desc:'Navy · gold',     colors:['#0f1626','#d4af37'] },
-  { id:'blue-professional',  name:'Blue Professional', desc:'Pale blue · navy', colors:['#f4f8ff','#1e40af'] },
-  { id:'green-campus',       name:'Green Campus',      desc:'Cream · green',   colors:['#f4fbf4','#16a34a'] },
-  { id:'purple-modern',      name:'Purple Modern',     desc:'Lilac · purple',  colors:['#faf7ff','#a855f7'] },
-  { id:'classic-student',    name:'Classic Student',   desc:'Paper · maroon',  colors:['#faf4e6','#9a3412'] },
-  { id:'technical',          name:'Technical',         desc:'Slate · cyan',    colors:['#0b1220','#06b6d4'] },
-  { id:'medical',            name:'Medical College',   desc:'White · red',     colors:['#ffffff','#dc2626'] },
-  { id:'engineering',        name:'Engineering',       desc:'Charcoal · orange', colors:['#1a1a1f','#f97316'] }
-];
-
-function renderTemplatePicker(){
-  const grid = $('#tplGrid');
-  grid.innerHTML = TEMPLATES.map(t =>
-    '<div class="tpl-option' + (t.id === state.template ? ' active' : '') + '" data-tpl="' + t.id + '">' +
-      '<div class="tpl-swatch" style="background:' + t.colors[0] + '">' +
-        '<span style="background:' + t.colors[1] + '"></span>' +
-        '<span style="background:' + t.colors[0] + '"></span>' +
-      '</div>' +
-      '<div class="tpl-name">' + esc(t.name) + '</div>' +
-      '<div class="tpl-desc">' + esc(t.desc) + '</div>' +
-    '</div>'
-  ).join('');
-
-  grid.querySelectorAll('.tpl-option').forEach(el => {
-    el.addEventListener('click', () => {
-      state.template = el.dataset.tpl;
-      renderTemplatePicker();
-      renderCard();
-    });
-  });
-}
-
-/* =========================================================
-   BULK PROFILES
-   ========================================================= */
-function snapshotStudent(){
-  return JSON.parse(JSON.stringify({
-    student: state.student,
-    institutionId: state.institutionId,
-    institutionName: state.institutionName,
-    institutionType: state.institutionType,
-    institutionIsReal: state.institutionIsReal,
-    departmentName: state.departmentName,
-    departmentAbbr: state.departmentAbbr,
-    degree: state.degree,
-    faculty: state.faculty,
-    fields: state.fields,
-    template: state.template
-  }));
-}
-
-function loadSnapshot(snap){
-  state.student        = JSON.parse(JSON.stringify(snap.student));
-  state.institutionId  = snap.institutionId;
-  state.institutionName= snap.institutionName;
-  state.institutionType= snap.institutionType;
-  state.institutionIsReal = snap.institutionIsReal;
-  state.departmentName = snap.departmentName;
-  state.departmentAbbr = snap.departmentAbbr;
-  state.degree         = snap.degree;
-  state.faculty        = snap.faculty;
-  state.fields         = JSON.parse(JSON.stringify(snap.fields));
-  state.template       = snap.template;
-  refreshAllInputs();
-  renderInstWarning();
-}
-
-function generateBulk(n){
-  if (!Number.isFinite(n) || n < 1) { toast('Enter a positive number', 'err'); return; }
-  if (n > 500) { toast('Capped at 500 per run', 'warn'); n = 500; }
-  for (let i = 0; i < n; i++) {
-    generateEverything(true); // silent
-    const snap = snapshotStudent();
-    state.profiles.push({
-      key: 'p_' + uid(),
-      fullName: state.student.fullName,
-      sampleId: getFieldValue('studentId'),
-      department: state.departmentName,
-      institution: state.institutionName,
-      snapshot: snap
-    });
-  }
-  renderProfiles();
-  toast('Generated ' + n + ' sample profile' + (n===1?'':'s'), 'ok');
-}
-
-function renderProfiles(){
-  const list = $('#profilesList');
-  const search = ($('#profileSearch').value || '').toLowerCase().trim();
-  const filterDept = $('#profileFilter').value;
-
-  // populate department filter
-  const depts = new Set(state.profiles.map(p => p.department).filter(Boolean));
-  const filterSel = $('#profileFilter');
-  const current = filterSel.value;
-  filterSel.innerHTML = '<option value="">All departments</option>' +
-    Array.from(depts).sort().map(d => '<option value="' + esc(d) + '">' + esc(d) + '</option>').join('');
-  filterSel.value = current;
-
-  const filtered = state.profiles.filter(p => {
-    if (filterDept && p.department !== filterDept) return false;
-    if (search) {
-      const hay = (p.fullName + ' ' + p.sampleId + ' ' + p.department + ' ' + p.institution).toLowerCase();
-      if (!hay.includes(search)) return false;
-    }
-    return true;
-  });
-
-  if (!filtered.length) {
-    list.innerHTML = '<div class="muted" style="padding:14px;text-align:center;font-size:12px">' +
-      (state.profiles.length ? 'No profiles match this filter.' : 'No profiles yet. Generate some above.') + '</div>';
-    return;
-  }
-
-  list.innerHTML = filtered.map(p =>
-    '<div class="profile-row" data-key="' + p.key + '">' +
-      '<span class="pname">' + esc(p.fullName || '—') + '</span>' +
-      '<span class="pid">' + esc(p.sampleId || '—') + '</span>' +
-      '<span class="pdept">' + esc(p.department || '—') + '</span>' +
-      '<button class="pdel" data-del="' + p.key + '">×</button>' +
-    '</div>'
-  ).join('');
-
-  list.querySelectorAll('.profile-row').forEach(row => {
-    row.addEventListener('click', e => {
-      if (e.target.dataset.del) return;
-      const key = row.dataset.key;
-      const p = state.profiles.find(x => x.key === key);
-      if (p) {
-        loadSnapshot(p.snapshot);
-        toast('Loaded profile: ' + (p.fullName || p.sampleId), 'ok');
-      }
-    });
-  });
-  list.querySelectorAll('[data-del]').forEach(btn => {
-    btn.addEventListener('click', e => {
-      e.stopPropagation();
-      const key = btn.dataset.del;
-      state.profiles = state.profiles.filter(x => x.key !== key);
-      renderProfiles();
-    });
-  });
-}
-
-/* =========================================================
-   GENERATE-ALL / RANDOMIZE
-   ========================================================= */
-function generateEverything(silent){
-  const t = state.autoToggles;
-
-  if (t.name) {
-    const nm = randomName(state.nameConfig.category, state.nameConfig.gender);
-    state.student.fullName = nm.full;
-    state.student.guardian = nm.first + ' ' + (nm.last || '');
-  }
-  if (t.inst) {
-    const inst = randomInstitution();
-    state.institutionId     = inst.id;
-    state.institutionName   = inst.name;
-    state.institutionType   = inst.type;
-    state.institutionIsReal = !!inst.isReal;
-  }
-  if (t.dept) {
-    const d = randomDepartment();
-    state.departmentName = d.name;
-    state.departmentAbbr = d.abbr;
-    state.degree = randomDegree(d.abbr);
-    state.faculty = 'Faculty of ' + (d.name.split(' ')[0] || 'Studies');
-    setFieldValue('department', d.name);
-    setFieldValue('degree', state.degree);
-  }
-  if (t.academic) {
-    const startYear = 2020 + rand(6);
-    const dur = 4;
-    setFieldValue('session', startYear + '-' + (startYear + dur));
-    setFieldValue('semester', pick(['1st','2nd','3rd','4th','5th','6th','7th','8th']));
-    setFieldValue('section', pick(['A','B','C']));
-    setFieldValue('campus', pick(['Main','City','North','South']));
-    setFieldValue('admissionDate', fmtDate(new Date(startYear, 7, 15)));
-    setFieldValue('issueDate', fmtDate(new Date()));
-    setFieldValue('expiryDate', fmtDate(new Date(Date.now() + dur*365*24*3600*1000)));
-    setFieldValue('status', 'Active');
-  }
-  if (t.numbers) generateAllNumbers();
-  if (t.email) {
-    const em = generateEmail();
-    if (em) setFieldValue('email', em);
-  }
-  if (t.photo) {
-    state.student.photo = null; // default synthetic avatar
-  }
-
-  refreshAllInputs();
-  renderInstWarning();
-  if (!silent) toast('Generated a fresh sample profile', 'ok');
-}
-
-/* =========================================================
-   EXPORT
-   ========================================================= */
-async function exportPNG(el, filename){
-  if (!window.html2canvas) {
-    toast('html2canvas not loaded — cannot export PNG', 'err');
-    return;
-  }
-  const prevT = el.style.transform;
-  el.style.transform = 'none';
-  try {
-    const canvas = await html2canvas(el, {
-      scale: 2,
-      backgroundColor: null,
-      useCORS: true,
-      logging: false
-    });
-    downloadDataURL(canvas.toDataURL('image/png'), filename);
-    toast('Downloaded ' + filename, 'ok');
-  } catch(err) {
-    console.error(err);
-    toast('PNG export failed: ' + err.message, 'err');
-  } finally {
-    el.style.transform = prevT;
-  }
-}
-
-function exportCSV(){
-  if (!state.profiles.length) { toast('No profiles to export — generate some first', 'warn'); return; }
-  const cols = ['Full Name','Sample ID','Department','Degree','Institution','Session','Email','DISCLAIMER'];
-  const rows = [cols.join(',')];
-  state.profiles.forEach(p => {
-    const snap = p.snapshot;
-    const f = id => (snap.fields.find(x => x.id === id) || {}).value || '';
-    rows.push([
-      p.fullName,
-      p.sampleId,
-      p.department,
-      snap.degree,
-      p.institution,
-      f('session'),
-      f('email'),
-      'FICTIONAL SAMPLE — NOT VALID ID'
-    ].map(csvCell).join(','));
-  });
-  const blob = new Blob([rows.join('\n')], { type: 'text/csv;charset=utf-8' });
-  downloadBlob(blob, 'sample-profiles-' + Date.now() + '.csv');
-  toast('CSV exported', 'ok');
-}
-
-function csvCell(v){
-  const s = String(v == null ? '' : v);
-  return /[",\n]/.test(s) ? '"' + s.replace(/"/g,'""') + '"' : s;
-}
-
-function exportJSON(){
-  const snap = {
-    _meta: { generator: 'ID Forge', disclaimer: 'All data fictional. Not valid ID.', exportedAt: new Date().toISOString() },
-    state: {
-      appTitle: state.appTitle,
-      cardTitle: state.cardTitle,
-      template: state.template,
-      student: state.student,
-      institutionId: state.institutionId,
-      institutionName: state.institutionName,
-      institutionType: state.institutionType,
-      institutionIsReal: state.institutionIsReal,
-      departmentName: state.departmentName,
-      departmentAbbr: state.departmentAbbr,
-      degree: state.degree,
-      faculty: state.faculty,
-      fields: state.fields,
-      numConfig: state.numConfig,
-      emailConfig: state.emailConfig,
-      nameConfig: state.nameConfig,
-      customInstitutions: state.customInstitutions,
-      customDepartments: state.customDepartments,
-      autoToggles: state.autoToggles
-    }
-  };
-  const blob = new Blob([JSON.stringify(snap, null, 2)], { type: 'application/json' });
-  downloadBlob(blob, 'idforge-config-' + Date.now() + '.json');
-  toast('Config exported', 'ok');
-}
-
-function importJSON(file){
-  const reader = new FileReader();
-  reader.onload = () => {
-    try {
-      const data = JSON.parse(reader.result);
-      if (!data.state) throw new Error('Missing "state" object');
-      const s = data.state;
-      Object.keys(s).forEach(k => { state[k] = s[k]; });
-      refreshAllInputs();
-      renderInstWarning();
-      toast('Config imported', 'ok');
-    } catch(e) {
-      toast('Import failed: ' + e.message, 'err');
-    }
-  };
-  reader.readAsText(file);
-}
-
-/* =========================================================
-   LOCALSTORAGE — saved templates
-   ========================================================= */
-const LS_KEY = 'idforge_templates_v1';
-
-function lsRead(){
-  try { return JSON.parse(localStorage.getItem(LS_KEY) || '{}'); } catch { return {}; }
-}
-function lsWrite(obj){
-  try { localStorage.setItem(LS_KEY, JSON.stringify(obj)); }
-  catch(e){ toast('localStorage write failed', 'err'); }
-}
-
-function refreshSavedTemplates(){
-  const sel = $('#savedTemplates');
-  const all = lsRead();
-  const keys = Object.keys(all);
-  sel.innerHTML = '<option value="">— none —</option>' +
-    keys.map(k => '<option value="' + esc(k) + '">' + esc(k) + '</option>').join('');
-}
-
-function saveTemplate(name){
-  if (!name || !name.trim()) { toast('Enter a template name', 'err'); return; }
-  const all = lsRead();
-  all[name.trim()] = {
-    savedAt: new Date().toISOString(),
-    snap: snapshotStudent(),
-    template: state.template,
-    appTitle: state.appTitle,
-    cardTitle: state.cardTitle
-  };
-  lsWrite(all);
-  refreshSavedTemplates();
-  toast('Saved "' + name.trim() + '"', 'ok');
-}
-
-function loadTemplate(name){
-  const all = lsRead();
-  if (!all[name]) { toast('Template not found', 'err'); return; }
-  const t = all[name];
-  loadSnapshot(t.snap);
-  state.template  = t.template || state.template;
-  state.appTitle  = t.appTitle || state.appTitle;
-  state.cardTitle = t.cardTitle || state.cardTitle;
-  refreshAllInputs();
-  renderInstWarning();
-  toast('Loaded "' + name + '"', 'ok');
-}
-
-function deleteTemplate(name){
-  const all = lsRead();
-  delete all[name];
-  lsWrite(all);
-  refreshSavedTemplates();
-  toast('Deleted "' + name + '"', 'ok');
-}
-
-/* =========================================================
-   EVENT WIRING
-   ========================================================= */
-function wireTabs(){
-  $$('#tabsNav .tab').forEach(tab => {
-    tab.addEventListener('click', () => {
-      $$('#tabsNav .tab').forEach(t => t.classList.toggle('active', t === tab));
-      $$('.tab-content').forEach(p => p.classList.toggle('active', p.dataset.panel === tab.dataset.tab));
-    });
-  });
-}
-
-function wireStudentTab(){
-  $('#btnPickName').addEventListener('click', () => {
-    state.nameConfig.category = $('#nameCat').value;
-    state.nameConfig.gender   = $('#nameGender').value;
-    const nm = randomName(state.nameConfig.category, state.nameConfig.gender);
-    state.student.fullName = nm.full;
-    state.student.guardian = nm.first + ' ' + nm.last;
-    refreshAllInputs();
-    renderCard();
-    toast('Picked: ' + nm.full, 'ok');
-  });
-
-  $('#inputFullName').addEventListener('input', e => {
-    state.student.fullName = e.target.value;
-    const p = splitFullName(e.target.value);
-    $('#inputFirst').value = p.first;
-    $('#inputMiddle').value = p.middle;
-    $('#inputLast').value = p.last;
-    renderCard();
-    $('#avatarImg').src = state.student.photo || makeAvatar(state.student.fullName, state.student.fullName);
-  });
-  $('#inputGuardian').addEventListener('input', e => { state.student.guardian = e.target.value; });
-
-  ['#inputFirst','#inputMiddle','#inputLast'].forEach(sel => {
-    $(sel).addEventListener('input', () => {
-      const full = [ $('#inputFirst').value, $('#inputMiddle').value, $('#inputLast').value ]
-        .map(s => s.trim()).filter(Boolean).join(' ');
-      state.student.fullName = full;
-      $('#inputFullName').value = full;
-      renderCard();
-    });
-  });
-  $('#btnComposeName').addEventListener('click', () => {
-    const full = [ $('#inputFirst').value, $('#inputMiddle').value, $('#inputLast').value ]
-      .map(s => s.trim()).filter(Boolean).join(' ');
-    state.student.fullName = full;
-    $('#inputFullName').value = full;
-    renderCard();
-    toast('Name composed', 'ok');
-  });
-
-  // avatar
-  $('#btnRandomAvatar').addEventListener('click', () => {
-    state.student.photo = makeAvatar(uid(), state.student.fullName || uid());
-    $('#avatarImg').src = state.student.photo;
-    renderCard();
-    toast('Random synthetic avatar', 'ok');
-  });
-  $('#btnUploadAvatar').addEventListener('click', () => $('#avatarFile').click());
-  $('#avatarFile').addEventListener('change', e => {
-    const file = e.target.files[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = ev => {
-      state.student.photo = ev.target.result;
-      $('#avatarImg').src = ev.target.result;
-      renderCard();
-      toast('Image loaded', 'ok');
-    };
-    reader.readAsDataURL(file);
-    e.target.value = '';
-  });
-  $('#btnClearAvatar').addEventListener('click', () => {
-    state.student.photo = null;
-    $('#avatarImg').src = makeAvatar(state.student.fullName, state.student.fullName);
-    renderCard();
-  });
-
-  // email
-  $('#emailFormat').addEventListener('change', e => { state.emailConfig.format = e.target.value; });
-  $('#emailDomain').addEventListener('input', e => { state.emailConfig.domain = e.target.value; });
-  $('#btnGenEmail').addEventListener('click', () => {
-    const em = generateEmail();
-    if (!em) { toast('Manual format selected — nothing to generate', 'warn'); return; }
-    setFieldValue('email', em);
-    $('#inputEmail').value = em;
-    renderCard();
-    toast('Generated: ' + em, 'ok');
-  });
-  $('#inputEmail').addEventListener('input', e => {
-    setFieldValue('email', e.target.value);
-    renderCard();
-  });
-  $('#btnCopyEmail').addEventListener('click', async () => {
-    const v = $('#inputEmail').value;
-    if (!v) return;
-    try { await navigator.clipboard.writeText(v); toast('Copied', 'ok'); }
-    catch { toast('Copy blocked by browser', 'err'); }
-  });
-
-  // custom name lists
-  $('#btnSaveCustomNames').addEventListener('click', () => {
-    const cf = $('#customFirstNames').value.split(/[\n,]/).map(s=>s.trim()).filter(Boolean);
-    const cl = $('#customLastNames').value.split(/[\n,]/).map(s=>s.trim()).filter(Boolean);
-    state.nameConfig.customFirst = cf;
-    state.nameConfig.customLast  = cl;
-    toast('Saved ' + cf.length + ' first / ' + cl.length + ' last', 'ok');
-  });
-  $('#btnImportNames').addEventListener('click', () => $('#importNamesFile').click());
-  $('#importNamesFile').addEventListener('change', e => {
-    const file = e.target.files[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = ev => {
-      const lines = String(ev.target.result).split(/\r?\n/).map(s => s.trim()).filter(Boolean);
-      // guess columns: if comma → split first/last
-      const first = [], last = [];
-      lines.forEach(line => {
-        const parts = line.split(',').map(s=>s.trim());
-        if (parts.length >= 2) { first.push(parts[0]); last.push(parts[1]); }
-        else first.push(parts[0]);
-      });
-      state.nameConfig.customFirst = (state.nameConfig.customFirst || []).concat(first);
-      state.nameConfig.customLast  = (state.nameConfig.customLast  || []).concat(last);
-      $('#customFirstNames').value = state.nameConfig.customFirst.join('\n');
-      $('#customLastNames').value  = state.nameConfig.customLast.join('\n');
-      toast('Imported ' + lines.length + ' name lines', 'ok');
-    };
-    reader.readAsText(file);
-    e.target.value = '';
-  });
-}
-
-function wireInstitutionTab(){
-  $('#selectInstitution').addEventListener('change', e => {
-    const all = INSTITUTIONS.concat(state.customInstitutions);
-    const i = all.find(x => x.id === e.target.value);
-    if (!i) return;
-    state.institutionId     = i.id;
-    state.institutionName   = i.name;
-    state.institutionType   = i.type;
-    state.institutionIsReal = !!i.isReal;
-    $('#inputInstName').value = i.name;
-    $('#inputInstType').value = i.type;
-    renderInstWarning();
-    renderCard();
-  });
-  $('#btnRandomInst').addEventListener('click', () => {
-    const i = randomInstitution();
-    state.institutionId     = i.id;
-    state.institutionName   = i.name;
-    state.institutionType   = i.type;
-    state.institutionIsReal = !!i.isReal;
-    $('#selectInstitution').value = i.id;
-    $('#inputInstName').value = i.name;
-    $('#inputInstType').value = i.type;
-    renderInstWarning();
-    renderCard();
-    toast('Institution: ' + i.name, 'ok');
-  });
-  $('#btnAddInst').addEventListener('click', () => {
-    const name = prompt('New fictional institution name:', 'My Custom Institute');
-    if (!name) return;
-    const id = 'c_' + uid();
-    state.customInstitutions.push({ id, name, type: 'College', isReal: false, custom: true });
-    state.institutionId     = id;
-    state.institutionName   = name;
-    state.institutionType   = 'College';
-    state.institutionIsReal = false;
-    renderInstitutionSelect();
-    $('#inputInstName').value = name;
-    renderInstWarning();
-    renderCard();
-    toast('Added: ' + name, 'ok');
-  });
-  $('#btnRemoveInst').addEventListener('click', () => {
-    if (!state.institutionId.startsWith('c_')) { toast('Only custom institutions can be removed', 'warn'); return; }
-    state.customInstitutions = state.customInstitutions.filter(x => x.id !== state.institutionId);
-    state.institutionId     = 'f1';
-    state.institutionName   = 'Demo Institute of Technology';
-    state.institutionType   = 'Computer Science Institute';
-    state.institutionIsReal = false;
-    renderInstitutionSelect();
-    renderInstWarning();
-    renderCard();
-    toast('Removed custom institution', 'ok');
-  });
-  $('#inputInstName').addEventListener('input', e => {
-    state.institutionName = e.target.value;
-    renderCard();
-  });
-  $('#inputInstType').addEventListener('change', e => {
-    state.institutionType = e.target.value;
-    renderCard();
-  });
-
-  // department
-  $('#selectDept').addEventListener('change', e => {
-    const all = DEPARTMENTS.concat(state.customDepartments);
-    const d = all.find(x => x.abbr === e.target.value);
-    if (!d) return;
-    state.departmentName = d.name;
-    state.departmentAbbr = d.abbr;
-    setFieldValue('department', d.name);
-    renderCard();
-  });
-  $('#btnRandomDept').addEventListener('click', () => {
-    const d = randomDepartment();
-    state.departmentName = d.name;
-    state.departmentAbbr = d.abbr;
-    setFieldValue('department', d.name);
-    $('#selectDept').value = d.abbr;
-    state.degree = randomDegree(d.abbr);
-    setFieldValue('degree', state.degree);
-    $('#inputDegree').value = state.degree;
-    renderCard();
-    toast('Department: ' + d.name, 'ok');
-  });
-  $('#btnAddDept').addEventListener('click', () => {
-    const name = prompt('Custom department name:', 'Astronomy');
-    if (!name) return;
-    const abbr = prompt('Abbreviation:', 'AST') || 'CUS';
-    state.customDepartments.push({ name, abbr });
-    renderDepartmentSelect();
-    state.departmentName = name;
-    state.departmentAbbr = abbr;
-    setFieldValue('department', name);
-    renderCard();
-    toast('Added department: ' + name, 'ok');
-  });
-  $('#inputDegree').addEventListener('input', e => {
-    state.degree = e.target.value;
-    setFieldValue('degree', e.target.value);
-    renderCard();
-  });
-  $('#inputFaculty').addEventListener('input', e => {
-    state.faculty = e.target.value;
-    setFieldValue('faculty', e.target.value);
-    renderCard();
-  });
-}
-
-function wireNumbersTab(){
-  $('#numPrefix').addEventListener('input', e => { state.numConfig.prefix = e.target.value; });
-  $('#numDigits').addEventListener('input', e => { state.numConfig.digits = Math.max(1, Math.min(10, +e.target.value || 4)); });
-  $('#numYear').addEventListener('input', e => { state.numConfig.year = Math.max(2000, Math.min(2100, +e.target.value || 2026)); });
-  $('#numSep').addEventListener('change', e => { state.numConfig.sep = e.target.value; });
-  $('#numMode').addEventListener('change', e => { state.numConfig.mode = e.target.value; });
-  $('#btnGenNumbers').addEventListener('click', () => {
-    generateAllNumbers();
-    refreshAllInputs();
-    toast('Numbers regenerated', 'ok');
-  });
-}
-
-function wireAcademicTab(){
-  const map = {
-    '#inputSession':    'session',
-    '#inputSemester':   'semester',
-    '#inputYearStudy':  'yearOfStudy',
-    '#inputSection':    'section',
-    '#inputCampus':     'campus',
-    '#inputAdmission':  'admissionDate',
-    '#inputIssue':      'issueDate',
-    '#inputExpiry':     'expiryDate',
-    '#inputStatus':     'status'
-  };
-  Object.keys(map).forEach(sel => {
-    const fieldId = map[sel];
-    const el = $(sel);
-    if (!el) return;
-    el.addEventListener('input', e => {
-      // ensure field exists
-      if (!state.fields.find(f => f.id === fieldId)) {
-        state.fields.push({ id: fieldId, label: sel.replace('#input','').replace(/([A-Z])/g,' $1').trim(), value:'', visible:true, locked:false });
-      }
-      setFieldValue(fieldId, e.target.value);
-      renderCard();
-      renderFieldsEditor();
-    });
-  });
-}
-
-function wireFieldsTab(){
-  $('#btnAddField').addEventListener('click', () => {
-    state.fields.push({ id: 'custom_' + uid(), label: 'New Field', value: '', visible: true, locked: false });
-    renderFieldsEditor();
-    renderCard();
-    toast('Field added', 'ok');
-  });
-  $('#btnResetFields').addEventListener('click', () => {
-    state.fields = DEFAULT_FIELDS();
-    refreshAllInputs();
-    renderCard();
-    toast('Fields reset', 'ok');
-  });
-}
-
-function wireTemplateTab(){
-  $('#inputCardTitle').addEventListener('input', e => {
-    state.cardTitle = e.target.value;
-    renderCard();
-  });
-}
-
-function wireBulkTab(){
-  $$('[data-bulk]').forEach(btn => {
-    btn.addEventListener('click', () => generateBulk(+btn.dataset.bulk));
-  });
-  $('#btnBulkCustom').addEventListener('click', () => {
-    const v = prompt('How many profiles?', '15');
-    if (!v) return;
-    generateBulk(+v);
-  });
-  $('#btnClearProfiles').addEventListener('click', () => {
-    if (!state.profiles.length) return;
-    if (confirm('Clear all generated sample profiles?')) {
-      state.profiles = [];
-      renderProfiles();
-      toast('Profiles cleared', 'ok');
-    }
-  });
-  $('#profileSearch').addEventListener('input', renderProfiles);
-  $('#profileFilter').addEventListener('change', renderProfiles);
-}
-
-function wireExportTab(){
-  $('#btnDownloadPNG').addEventListener('click', () => {
-    exportPNG($('#card-front'), 'sample-card-front-' + Date.now() + '.png');
-  });
-  $('#btnQuickPNG').addEventListener('click', () => {
-    exportPNG($('#card-front'), 'sample-card-front-' + Date.now() + '.png');
-  });
-  $('#btnPrint').addEventListener('click', () => window.print());
-  $('#btnExportCSV').addEventListener('click', exportCSV);
-  $('#btnExportJSON').addEventListener('click', exportJSON);
-  $('#btnImportJSON').addEventListener('click', () => $('#importJSONFile').click());
-  $('#importJSONFile').addEventListener('change', e => {
-    const file = e.target.files[0];
-    if (file) importJSON(file);
-    e.target.value = '';
-  });
-
-  $('#btnSaveTemplate').addEventListener('click', () => saveTemplate($('#templateName').value));
-  $('#btnLoadTemplate').addEventListener('click', () => {
-    const name = $('#savedTemplates').value;
-    if (name) loadTemplate(name);
-  });
-  $('#btnDeleteTemplate').addEventListener('click', () => {
-    const name = $('#savedTemplates').value;
-    if (name && confirm('Delete template "' + name + '"?')) deleteTemplate(name);
-  });
-  $('#btnClearSaved').addEventListener('click', () => {
-    if (!confirm('Clear all saved templates from this browser?')) return;
-    localStorage.removeItem(LS_KEY);
-    refreshSavedTemplates();
-    toast('Cleared saved templates', 'ok');
-  });
-
-  $('#btnQuickSave').addEventListener('click', () => {
-    const name = prompt('Save current profile as (name):', 'my-sample');
-    if (name) saveTemplate(name);
-  });
-  $('#btnQuickCopyId').addEventListener('click', async () => {
-    const id = getFieldValue('studentId');
-    if (!id) { toast('No sample ID to copy', 'warn'); return; }
-    try { await navigator.clipboard.writeText(id); toast('Copied: ' + id, 'ok'); }
-    catch { toast('Copy blocked', 'err'); }
-  });
-}
-
-function wireSettingsTab(){
-  $('#inputAppTitle').addEventListener('input', e => {
-    state.appTitle = e.target.value || 'ID Forge';
-    $('#appTitle').textContent = state.appTitle;
-    document.title = state.appTitle + ' — Sample Student Card Generator';
-  });
-  const toggleMap = {
-    autoName: 'name',
-    autoInst: 'inst',
-    autoNumbers: 'numbers',
-    autoEmail: 'email',
-    autoDept: 'dept',
-    autoAcademic: 'academic',
-    autoPhoto: 'photo'
-  };
-  Object.keys(toggleMap).forEach(id => {
-    const el = $('#' + id);
-    if (!el) return;
-    el.addEventListener('change', () => { state.autoToggles[toggleMap[id]] = el.checked; });
-  });
-  $('#btnHardReset').addEventListener('click', () => {
-    if (!confirm('Reset everything back to defaults?')) return;
-    state = DEFAULT_STATE();
-    refreshAllInputs();
-    renderInstWarning();
-    toast('Reset to defaults', 'ok');
-  });
-}
-
-function wireTopbar(){
-  $('#btnGenerateAll').addEventListener('click', () => generateEverything(false));
-  $('#btnRandomizeAll').addEventListener('click', () => {
-    generateEverything(true);
-    toast('Randomized all unlocked fields', 'ok');
-  });
-  $('#btnReset').addEventListener('click', () => {
-    state = DEFAULT_STATE();
-    refreshAllInputs();
-    renderInstWarning();
-    toast('Reset to defaults', 'ok');
-  });
-}
-
-/* =========================================================
-   INIT
-   ========================================================= */
-function init(){
-  renderTemplatePicker();
-  wireTabs();
-  wireTopbar();
-  wireStudentTab();
-  wireInstitutionTab();
-  wireNumbersTab();
-  wireAcademicTab();
-  wireFieldsTab();
-  wireTemplateTab();
-  wireBulkTab();
-  wireExportTab();
-  wireSettingsTab();
-
-  refreshAllInputs();
-  refreshSavedTemplates();
-  renderInstWarning();
-
-  // start with a populated sample so the app isn't empty on first load
-  if (!state.student.fullName) {
-    generateEverything(true);
-    renderCard();
-  }
-
-  // wait one frame for layout, then size cards
-  requestAnimationFrame(fitCards);
-
-  // library availability notice
-  setTimeout(() => {
-    const missing = [];
-    if (!window.QRCode)     missing.push('QR');
-    if (!window.JsBarcode)  missing.push('barcode');
-    if (!window.html2canvas) missing.push('PNG export');
-    if (missing.length) toast('CDN blocked for: ' + missing.join(', ') + ' — other features still work', 'warn');
-  }, 400);
-}
-
-if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', init);
-} else {
-  init();
-}
-
-})();
-</script>
 </body>
 </html>
