@@ -1,15 +1,20 @@
 /* ============================================================
    Student ID Card Studio -- logic
-   Vertical ID card, 200 male + 200 female names, 250 phone numbers,
-   QR with optional center logo, drawable/uploadable signature.
+   Fixes in v5:
+   - Download captures hidden cards (unhide → capture → rehide)
+   - No color-mix / conic-gradient → html2canvas-safe PNG
+   - QR rendered as <img> (reliable capture)
+   - Lock Name button shows active state + icon swap
+   - Signature pad fixed at 600x200 (no 0-size init)
+   - All buttons verified wired
    ============================================================ */
 
 'use strict';
 
-const STORAGE_KEY = 'pkidstudio.v4';
+const STORAGE_KEY = 'pkidstudio.v5';
 const DEFAULT_PHOTO = 'assets/default-student.jpg';
 
-/* ---------- NAMES -- 200 MALE ---------- */
+/* ---------- 200 MALE NAMES ---------- */
 const NAMES_MALE = [
 'Ali Hassan','Ahmed Raza','Hamza Khan','Muhammad Abdullah','Usman Tariq','Bilal Ahmed','Faisal Iqbal','Zain Malik','Hassan Raza','Ibrahim Shah',
 'Saad Farooq','Arsalan Yousaf','Danish Khan','Rehan Akhtar','Talha Siddiqui','Umer Riaz','Haris Mehmood','Shayan Ali','Faizan Haider','Ayan Qureshi',
@@ -33,7 +38,7 @@ const NAMES_MALE = [
 'Mazhar Iqbal','Maaz Khan','Liaqat Ali','Khalid Mahmood','Khurram Shahzad','Khizar Hayat','Kashif Ali','Karim Khan','Junaid Akram','Jibran Khan'
 ];
 
-/* ---------- NAMES -- 200 FEMALE ---------- */
+/* ---------- 200 FEMALE NAMES ---------- */
 const NAMES_FEMALE = [
 'Ayesha Noor','Fatima Zahra','Sara Ahmed','Hira Khan','Zainab Malik','Iqra Fatima','Maryam Riaz','Sana Yousuf','Maham Ali','Amna Sheikh',
 'Noor Fatima','Rida Awan','Areeba Khan','Aiman Fatima','Alina Khan','Anam Raza','Anaya Malik','Anoushay Abbasi','Aqsa Khan','Arisha Ahmed',
@@ -57,12 +62,13 @@ const NAMES_FEMALE = [
 'Areej Khan','Aroosa Khan','Asma Khan','Farah Khan','Fiza Khan','Huma Khan','Huma Nawab','Juggun Khan','Meera Khan','Meesha Khan'
 ];
 
-/* ---------- PHONE POOL -- 250 Pakistani numbers ---------- */
+/* ---------- 250 PHONE POOL ---------- */
 const PHONE_PREFIXES = ['300','301','302','303','304','305','306','307','308','309','311','312','313','314','315','316','317','318','320','321','322','323','324','325','330','331','332','333','334','335','336','337','340','341','342','343','344','345','346','347','355'];
-
 function buildPhonePool(){
   const pool = new Set();
-  while(pool.size < 250){
+  let guard = 0;
+  while(pool.size < 250 && guard < 5000){
+    guard++;
     const p = PHONE_PREFIXES[Math.floor(Math.random()*PHONE_PREFIXES.length)];
     const n = String(Math.floor(Math.random()*10000000)).padStart(7,'0');
     pool.add(`+92 ${p} ${n}`);
@@ -155,7 +161,7 @@ const I18N = {
     print:'Print', downloadBoth:'Download Both',
     gender:'Gender', photo:'Portrait', upload:'Upload', restoreDefault:'Restore',
     fullName:'Full Name', nameUrdu:'Name in Urdu', fatherName:'Father / Guardian Name',
-    pickName:'Pick Random Name', lockName:'Lock Name',
+    pickName:'Pick Random Name', lockName:'Lock Name', unlockName:'Unlock Name',
     searchInstitution:'Search Institution', selectInstitution:'Select Institution',
     institutionType:'Type', abbreviation:'Abbreviation', customInstitution:'Custom Institution Name',
     logo:'Institution Logo', pickInstitution:'Pick Random Institution', reset:'Reset',
@@ -186,7 +192,7 @@ const I18N = {
     print:'پرنٹ', downloadBoth:'دونوں ڈاؤن لوڈ',
     gender:'جنس', photo:'تصویر', upload:'اپ لوڈ', restoreDefault:'بحال کریں',
     fullName:'پورا نام', nameUrdu:'اردو نام', fatherName:'والد / سرپرست کا نام',
-    pickName:'بے ترتیب نام', lockName:'نام مقفل کریں',
+    pickName:'بے ترتیب نام', lockName:'نام مقفل کریں', unlockName:'نام کھولیں',
     searchInstitution:'ادارہ تلاش کریں', selectInstitution:'ادارہ منتخب کریں',
     institutionType:'قسم', abbreviation:'مختصر نام', customInstitution:'حسبِ ضرورت ادارہ',
     logo:'ادارے کا لوگو', pickInstitution:'بے ترتیب ادارہ', reset:'ری سیٹ',
@@ -254,22 +260,36 @@ function defaultState(){
 
 let state = defaultState();
 
-/* ---------- UTILITIES ---------- */
+/* ---------- UTIL ---------- */
 const $ = (s, el=document) => el.querySelector(s);
 const $$ = (s, el=document) => Array.from(el.querySelectorAll(s));
 const rand = a => a[Math.floor(Math.random()*a.length)];
 const randInt = (a,b) => Math.floor(Math.random()*(b-a+1))+a;
 const pad = (n,w=3) => String(n).padStart(w,'0');
 const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const delay = ms => new Promise(r=>setTimeout(r,ms));
+
+function shade(hex, percent){
+  const h = hex.replace('#','');
+  const num = parseInt(h.length === 3 ? h.split('').map(c=>c+c).join('') : h, 16);
+  let r = (num >> 16) + percent;
+  let g = ((num >> 8) & 0xFF) + percent;
+  let b = (num & 0xFF) + percent;
+  r = Math.max(0, Math.min(255, r));
+  g = Math.max(0, Math.min(255, g));
+  b = Math.max(0, Math.min(255, b));
+  return '#' + ((1<<24) + (r<<16) + (g<<8) + b).toString(16).slice(1);
+}
 
 function toast(msg, type='ok'){
   const t = $('#toast');
+  if(!t) return;
   t.textContent = msg;
   t.className = 'toast show ' + type;
   clearTimeout(toast._t);
   toast._t = setTimeout(()=>t.classList.remove('show'), 2200);
 }
-function save(){ try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }catch(e){} }
+function save(){ try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }catch(e){ console.warn('save',e); } }
 function load(){
   try{
     const raw = localStorage.getItem(STORAGE_KEY);
@@ -279,10 +299,10 @@ function load(){
     state.profile = Object.assign(defaultState().profile, p.profile||{});
     state.design = Object.assign(defaultState().design, p.design||{});
     state.locks = Object.assign(defaultState().locks, p.locks||{});
-  }catch(e){}
+  }catch(e){ console.warn('load',e); }
 }
 
-/* ---------- NAME / GUARDIAN LOGIC ---------- */
+/* ---------- NAME / GUARDIAN ---------- */
 function randomNameFor(gender){
   return rand(gender === 'female' ? NAMES_FEMALE : NAMES_MALE);
 }
@@ -307,9 +327,7 @@ function applyGenderAndName(gender, force=true){
   state.profile.fatherName = guardianFromName(state.profile.name);
 }
 
-/* ---------- IDENTIFIER GENERATION ----------
-   INST(abbr) + 2-digit year + DEPT(abbr) + 3/4 digits
-*/
+/* ---------- IDENTIFIERS ---------- */
 function makeIdentifier(p, digits=3){
   const inst = (p.institutionShort||'INST').toUpperCase();
   const yr = String(p.year||'2026').slice(-2);
@@ -325,7 +343,6 @@ function makeEmail(p){
   const num = p.emailNumber || pad(randInt(1,999),3);
   return `${inst}${yr}${dept}${num}@${inst}.edu.pk`;
 }
-
 function regenIdentifiers(){
   const p = state.profile;
   if(!state.locks.studentId) p.studentId = makeIdentifier(p,3);
@@ -341,8 +358,8 @@ function regenIdentifiers(){
   }
 }
 
-/* ---------- QR ---------- */
-function qrSVG(payload){
+/* ---------- QR (as <img>, html2canvas-safe) ---------- */
+function qrIMG(payload){
   if(typeof qrcode === 'undefined'){
     return `<div style="font-size:7px;color:#000;text-align:center;padding:4px;word-break:break-all">${esc(payload)}</div>`;
   }
@@ -350,14 +367,16 @@ function qrSVG(payload){
     const qr = qrcode(0,'M');
     qr.addData(payload || 'https://t.me/ih5zz');
     qr.make();
-    return qr.createSvgTag({ cellSize:4, margin:0, scalable:true });
+    const svg = qr.createSvgTag({ cellSize:4, margin:0, scalable:true });
+    const dataUrl = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
+    return `<img src="${dataUrl}" alt="QR">`;
   }catch(e){
     return `<div style="font-size:7px;color:#000;text-align:center;padding:4px">QR error</div>`;
   }
 }
 
-/* ---------- SIGNATURE ---------- */
-function removeWhiteBg(dataUrl, threshold=238){
+/* ---------- SIGNATURE white-removal ---------- */
+function removeWhiteBg(dataUrl, threshold=236){
   return new Promise(resolve => {
     const img = new Image();
     img.onload = () => {
@@ -368,12 +387,9 @@ function removeWhiteBg(dataUrl, threshold=238){
       const d = ctx.getImageData(0,0,c.width,c.height);
       const data = d.data;
       for(let i=0;i<data.length;i+=4){
-        const r=data[i], g=data[i+1], b=data[i+2];
-        if(r>threshold && g>threshold && b>threshold) data[i+3]=0;
-        else {
-          const avg=(r+g+b)/3;
-          if(avg>200) data[i+3]=Math.round(data[i+3]*0.35);
-        }
+        const r=data[i], g=data[i+1], b=data[i+2], a=data[i+3];
+        if(a < 10) continue;
+        if(r>threshold && g>threshold && b>threshold) data[i+3] = 0;
       }
       ctx.putImageData(d,0,0);
       resolve(c.toDataURL('image/png'));
@@ -394,20 +410,26 @@ function photoMarkup(p){
   const fb = `data:image/svg+xml;utf8,${encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 120"><rect width="100" height="120" fill="%23222"/><circle cx="50" cy="45" r="20" fill="%23555"/><path d="M15 120c5-25 20-35 35-35s30 10 35 35z" fill="%23555"/></svg>')}`;
   return `<img src="${esc(src)}" alt="portrait" onerror="this.onerror=null;this.src='${fb}'">`;
 }
-
 function row(k,v){
   if(!v) return '';
   return `<div class="data-row"><span class="k">${esc(k)}</span><span class="v">${esc(v)}</span></div>`;
 }
 
-function renderFront(){
-  const p = state.profile, d = state.design;
-  const card = $('#card-front');
+function applyCardStyle(card, d){
   card.style.setProperty('--c-accent', d.accent);
   card.style.setProperty('--c-bg', d.bg);
   card.style.setProperty('--c-radius', d.radius + 'px');
   card.style.setProperty('--c-scale', d.scale);
+  // html2canvas-safe inline background (no color-mix)
+  card.style.background = `linear-gradient(160deg, ${d.bg} 0%, ${shade(d.bg, -22)} 100%)`;
+  card.style.backgroundColor = d.bg;
   card.dir = state.lang === 'ur' ? 'rtl' : 'ltr';
+}
+
+function renderFront(){
+  const p = state.profile, d = state.design;
+  const card = $('#card-front');
+  applyCardStyle(card, d);
 
   const rows = [
     row('Registration', p.regNumber),
@@ -436,17 +458,14 @@ function renderFront(){
         </div>
         <div class="card-badge">ID</div>
       </div>
-
       <div class="portrait-row">
         <div class="portrait-ring"><div class="portrait">${photoMarkup(p)}</div></div>
       </div>
-
       <div class="identity">
         <div class="name">${esc(p.name)}</div>
         ${p.nameUr ? `<div class="name-ur">${esc(p.nameUr)}</div>` : ''}
         <div class="degree">${esc(p.degree)}</div>
       </div>
-
       <div class="data-grid">${rows}</div>
       ${footer}
     </div>
@@ -456,14 +475,11 @@ function renderFront(){
 function renderBack(){
   const p = state.profile, d = state.design;
   const card = $('#card-back');
-  card.style.setProperty('--c-accent', d.accent);
-  card.style.setProperty('--c-bg', d.bg);
-  card.style.setProperty('--c-radius', d.radius + 'px');
-  card.style.setProperty('--c-scale', d.scale);
-  card.dir = state.lang === 'ur' ? 'rtl' : 'ltr';
+  applyCardStyle(card, d);
 
-  const qr = qrSVG(p.qrPayload);
+  const qr = qrIMG(p.qrPayload);
   const qrLogo = (d.showQrLogo && p.qrLogo) ? `<img class="qr-logo" src="${p.qrLogo}" alt="">` : '';
+
   const rows = [
     row('Guardian', p.fatherName),
     row('Roll No', p.rollNumber),
@@ -490,11 +506,9 @@ function renderBack(){
         </div>
         <div class="card-badge">BACK</div>
       </div>
-
       <div class="qr-section">
         <div class="qr-frame">${qr}${qrLogo}</div>
       </div>
-
       <div class="back-rows">${rows}</div>
       <div class="back-note">${esc(p.notes)}</div>
       ${sig}
@@ -510,6 +524,21 @@ function applySurface(){
 }
 
 /* ---------- FORM SYNC ---------- */
+function updateLockNameButton(){
+  const btn = $('#btn-lock-name');
+  if(!btn) return;
+  const locked = !!state.locks.name;
+  const iconUse = btn.querySelector('svg use');
+  if(iconUse) iconUse.setAttribute('href', locked ? '#i-lock' : '#i-unlock');
+  btn.classList.toggle('active', locked);
+  const span = btn.querySelector('span');
+  if(span){
+    const dict = I18N[state.lang];
+    span.textContent = locked ? dict.unlockName : dict.lockName;
+    span.setAttribute('data-i18n', locked ? 'unlockName' : 'lockName');
+  }
+}
+
 function syncForm(){
   const p = state.profile, d = state.design;
   const set = (id,v)=>{ const el=$(id); if(el && el.value !== (v??'')) el.value = v??''; };
@@ -547,12 +576,12 @@ function syncForm(){
   set('#in-expiryDate', p.expiryDate);
   set('#in-signatureLabel', p.signatureLabel);
 
-  $('#tg-showEmail').checked = d.showEmail;
-  $('#tg-showPhone').checked = d.showPhone;
-  $('#tg-showLocation').checked = d.showLocation;
-  $('#tg-showIssue').checked = d.showIssue;
-  $('#tg-showSignature').checked = d.showSignature;
-  $('#tg-showQrLogo').checked = d.showQrLogo;
+  const tg = {
+    '#tg-showEmail':d.showEmail, '#tg-showPhone':d.showPhone,
+    '#tg-showLocation':d.showLocation, '#tg-showIssue':d.showIssue,
+    '#tg-showSignature':d.showSignature, '#tg-showQrLogo':d.showQrLogo
+  };
+  Object.keys(tg).forEach(sel=>{ const el=$(sel); if(el) el.checked = !!tg[sel]; });
 
   const instSel = $('#in-institution');
   if(instSel) instSel.value = p.institution;
@@ -567,9 +596,12 @@ function syncForm(){
 
   $$('[data-lock]').forEach(b=>{
     const locked = !!state.locks[b.dataset.lock];
-    b.querySelector('svg').innerHTML = `<use href="${locked?'#i-lock':'#i-unlock'}"/>`;
-    b.style.color = locked ? 'var(--accent)' : '';
+    const u = b.querySelector('svg use');
+    if(u) u.setAttribute('href', locked ? '#i-lock' : '#i-unlock');
+    b.classList.toggle('active', locked);
   });
+
+  updateLockNameButton();
 }
 
 function refreshAreas(){
@@ -658,6 +690,7 @@ function applyLanguage(){
     const k=el.dataset.i18n; if(dict[k]) el.textContent=dict[k];
   });
   $$('.chip[data-lang]').forEach(c=>c.classList.toggle('active',c.dataset.lang===state.lang));
+  updateLockNameButton();
 }
 
 /* ---------- FIELD SET ---------- */
@@ -694,42 +727,81 @@ function setField(key,val){
   render(); syncForm(); save();
 }
 
-/* ---------- SIGNATURE PAD ---------- */
+/* ---------- SIGNATURE ---------- */
 let sigPad = null;
 function initSignaturePad(){
   const canvas = $('#sig-canvas');
   if(!canvas || typeof SignaturePad === 'undefined') return;
-  const ratio = Math.max(window.devicePixelRatio||1,1);
-  canvas.width = canvas.offsetWidth * ratio;
-  canvas.height = canvas.offsetHeight * ratio;
-  canvas.getContext('2d').scale(ratio,ratio);
-  sigPad = new SignaturePad(canvas, {
-    backgroundColor:'rgba(0,0,0,0)',
-    penColor:'#111111',
-    minWidth:0.8,
-    maxWidth:2.2
-  });
+  // Fixed intrinsic size to avoid 0x0 when panel is hidden
+  canvas.width = 600;
+  canvas.height = 200;
+  if(!sigPad){
+    sigPad = new SignaturePad(canvas, {
+      backgroundColor: 'rgba(255,255,255,0)',
+      penColor: '#0f172a',
+      minWidth: 0.8,
+      maxWidth: 2.5
+    });
+  }
 }
 function updateSigPreview(){
   const box = $('#sig-preview');
+  if(!box) return;
   if(state.profile.signature){
     box.innerHTML = `<img src="${state.profile.signature}" alt="signature">`;
   } else {
-    box.innerHTML = `<span>No signature set</span>`;
+    const dict = I18N[state.lang];
+    box.innerHTML = `<span>${dict.noSignature}</span>`;
   }
 }
 
-/* ---------- DOWNLOAD ---------- */
-function downloadCard(surface){
-  const el = surface==='back' ? $('#card-back') : $('#card-front');
+/* ---------- DOWNLOAD (fix) ---------- */
+async function downloadCard(surface){
+  const el = surface === 'back' ? $('#card-back') : $('#card-front');
+  const wrap = surface === 'back' ? $('#wrap-back') : $('#wrap-front');
+  if(!el || !wrap){ toast('Card not found','err'); return; }
   if(!window.html2canvas){ toast('Export library not loaded','err'); return; }
-  html2canvas(el,{backgroundColor:null,scale:2,logging:false,useCORS:true}).then(canvas=>{
-    const a=document.createElement('a');
-    a.download=`student-id-${surface}.png`;
-    a.href=canvas.toDataURL('image/png');
-    a.click();
-    toast('PNG exported');
-  }).catch(err=>{ console.error(err); toast('Export failed','err'); });
+
+  const wasHidden = wrap.hidden;
+  if(wasHidden) wrap.hidden = false;
+
+  // Give the browser 2 frames to paint the now-visible card
+  if(wasHidden){
+    await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
+    await delay(60);
+  }
+
+  const d = state.design;
+  try{
+    const canvas = await html2canvas(el, {
+      backgroundColor: d.bg,
+      scale: 2,
+      logging: false,
+      useCORS: true,
+      allowTaint: false,
+      imageTimeout: 8000
+    });
+    await new Promise(resolve => {
+      canvas.toBlob(blob => {
+        if(!blob){ toast('Export failed','err'); resolve(); return; }
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `student-id-${surface}.png`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        setTimeout(()=>URL.revokeObjectURL(url), 1500);
+        toast(`${surface} card downloaded`);
+        resolve();
+      }, 'image/png');
+    });
+  }catch(err){
+    console.error('capture failed', err);
+    toast('Export failed','err');
+  }finally{
+    if(wasHidden) wrap.hidden = true;
+  }
 }
 
 /* ---------- LIBRARY ---------- */
@@ -848,6 +920,9 @@ function wireNav(){
     $$('.panel').forEach(p=>p.classList.remove('active'));
     const t=$(`[data-panel="${b.dataset.section}"]`);
     if(t) t.classList.add('active');
+    if(b.dataset.section === 'signature'){
+      setTimeout(initSignaturePad, 40);
+    }
   }));
 }
 function wireSegments(){
@@ -877,19 +952,15 @@ function wireForm(){
     el.addEventListener(ev,()=>setField(map[sel],el.value));
   });
 
-  $('#in-gender').addEventListener('change',e=>{
-    applyGenderAndName(e.target.value,true);
-    syncForm(); render(); save();
-  });
-
   const designMap={
     '#in-accent':['accent','color'], '#in-cardBg':['bg','color'],
     '#in-radius':['radius','number'], '#in-scale':['scale','number'],
     '#in-cardTitle':['title','text']
   };
   Object.keys(designMap).forEach(sel=>{
+    const el=$(sel); if(!el) return;
     const [key,type]=designMap[sel];
-    $(sel).addEventListener('input',e=>{
+    el.addEventListener('input',e=>{
       state.design[key]=type==='number'?Number(e.target.value):e.target.value;
       render(); save();
     });
@@ -898,7 +969,8 @@ function wireForm(){
   [['#tg-showEmail','showEmail'],['#tg-showPhone','showPhone'],['#tg-showLocation','showLocation'],
    ['#tg-showIssue','showIssue'],['#tg-showSignature','showSignature'],['#tg-showQrLogo','showQrLogo']]
    .forEach(([sel,key])=>{
-     $(sel).addEventListener('change',e=>{ state.design[key]=e.target.checked; render(); save(); });
+     const el=$(sel); if(!el) return;
+     el.addEventListener('change',e=>{ state.design[key]=e.target.checked; render(); save(); });
    });
 }
 function wireSelects(){
@@ -931,13 +1003,18 @@ function wireSelects(){
 }
 function wireActions(){
   $('#btn-random-name').addEventListener('click',()=>{
-    if(state.locks.name){ toast('Name is locked','err'); return; }
+    if(state.locks.name){ toast('Name is locked -- unlock to randomize','err'); return; }
     applyGenderAndName(state.profile.gender,true);
     syncForm(); render(); save();
+    toast('New name picked');
   });
   $('#btn-lock-name').addEventListener('click',()=>{
-    state.locks.name=!state.locks.name; syncForm(); save();
+    state.locks.name=!state.locks.name;
+    updateLockNameButton();
+    syncForm(); save();
+    toast(state.locks.name ? 'Name locked' : 'Name unlocked');
   });
+
   $('#btn-photo-reset').addEventListener('click',()=>{
     state.profile.photo=DEFAULT_PHOTO; render(); save();
   });
@@ -974,6 +1051,7 @@ function wireActions(){
   });
   $('#btn-regen-all').addEventListener('click',()=>{
     regenIdentifiers(); syncForm(); render(); save();
+    toast('Unlocked IDs regenerated');
   });
   $$('[data-regen]').forEach(b=>b.addEventListener('click',()=>{
     const key=b.dataset.regen;
@@ -985,6 +1063,7 @@ function wireActions(){
   $$('[data-lock]').forEach(b=>b.addEventListener('click',()=>{
     state.locks[b.dataset.lock]=!state.locks[b.dataset.lock];
     syncForm(); save();
+    toast(state.locks[b.dataset.lock] ? `${b.dataset.lock} locked` : `${b.dataset.lock} unlocked`);
   }));
 
   $('#btn-copy-email').addEventListener('click',()=>{
@@ -1047,8 +1126,10 @@ function wireActions(){
   $('#btn-export-json').addEventListener('click',exportJSON);
   $('#in-importJson').addEventListener('change',e=>{ const f=e.target.files[0]; if(f) importJSON(f); });
 
-  $('#btn-download-both').addEventListener('click',()=>{
-    downloadCard('front'); setTimeout(()=>downloadCard('back'),700);
+  $('#btn-download-both').addEventListener('click',async ()=>{
+    await downloadCard('front');
+    await delay(400);
+    await downloadCard('back');
   });
   $('#btn-print').addEventListener('click',()=>window.print());
   $$('[data-download]').forEach(b=>b.addEventListener('click',()=>downloadCard(b.dataset.download)));
